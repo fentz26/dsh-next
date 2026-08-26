@@ -1,0 +1,36 @@
+# dsh-next benchmarks
+# cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness
+# trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
+
+## cold-load
+cold-load mixed-10k trial=0 | events=10000 | wall=4.14ms | cpu=4.27ms | rss=483MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load mixed-10k trial=1 | events=10000 | wall=5.06ms | cpu=10.52ms | rss=485MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load mixed-10k trial=2 | events=10000 | wall=2.5ms | cpu=8.19ms | rss=485.7MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load mixed-10k trial=3 | events=10000 | wall=3.25ms | cpu=7.68ms | rss=486.4MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load mixed-10k trial=4 | events=10000 | wall=2.21ms | cpu=4.4ms | rss=487.1MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+suffix-read mixed-10k trial=0 | fromSeq=5000 | wall=1.58ms | cpu=1.59ms
+suffix-read mixed-10k trial=1 | fromSeq=5000 | wall=2.63ms | cpu=5.26ms
+suffix-read mixed-10k trial=2 | fromSeq=5000 | wall=1.18ms | cpu=1.42ms
+suffix-read mixed-10k trial=3 | fromSeq=5000 | wall=1.16ms | cpu=1.16ms
+suffix-read mixed-10k trial=4 | fromSeq=5000 | wall=1.15ms | cpu=1.15ms
+cold-load mixed-100k trial=0 | events=100000 | wall=34.25ms | cpu=51.43ms | rss=490.8MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load mixed-100k trial=1 | events=100000 | wall=44.16ms | cpu=68.77ms | rss=517.9MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load mixed-100k trial=2 | events=100000 | wall=46.66ms | cpu=69.36ms | rss=536.3MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load mixed-100k trial=3 | events=100000 | wall=43.83ms | cpu=68.19ms | rss=564.2MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load mixed-100k trial=4 | events=100000 | wall=47.86ms | cpu=65.41ms | rss=583.3MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+suffix-read mixed-100k trial=0 | fromSeq=50000 | wall=40.8ms | cpu=64.88ms
+suffix-read mixed-100k trial=1 | fromSeq=50000 | wall=95.98ms | cpu=258.3ms
+suffix-read mixed-100k trial=2 | fromSeq=50000 | wall=90.07ms | cpu=263.82ms
+suffix-read mixed-100k trial=3 | fromSeq=50000 | wall=53.61ms | cpu=176.45ms
+suffix-read mixed-100k trial=4 | fromSeq=50000 | wall=63.77ms | cpu=200.12ms
+cold-load chunk-stream-50MB trial=0 | events=1092269 | wall=249.93ms | cpu=474.05ms | rss=655.8MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load chunk-stream-50MB trial=1 | events=1092269 | wall=248.82ms | cpu=450.14ms | rss=802.9MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load chunk-stream-50MB trial=2 | events=1092269 | wall=755.14ms | cpu=1,644.14ms | rss=965.9MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load chunk-stream-50MB trial=3 | events=1092269 | wall=292.06ms | cpu=515.97ms | rss=933.4MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+cold-load chunk-stream-50MB trial=4 | events=1092269 | wall=316.59ms | cpu=502.82ms | rss=871.5MiB | lag mean=NaN p95=0 p99=0 canaryP99=NaN canaryMax=0 drift=0
+suffix-read chunk-stream-50MB trial=0 | fromSeq=546134 | wall=544.18ms | cpu=1,304.12ms
+suffix-read chunk-stream-50MB trial=1 | fromSeq=546134 | wall=154.58ms | cpu=280.55ms
+suffix-read chunk-stream-50MB trial=2 | fromSeq=546134 | wall=132.18ms | cpu=257.34ms
+suffix-read chunk-stream-50MB trial=3 | fromSeq=546134 | wall=154.78ms | cpu=265.37ms
+suffix-read chunk-stream-50MB trial=4 | fromSeq=546134 | wall=147.47ms | cpu=257.84ms
+

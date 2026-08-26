@@ -1,0 +1,19 @@
+# dsh-next benchmarks
+# cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness
+# trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
+
+## compression
+compression dsh-encodeData size=1KB ops=2000 | wall=1.94ms ops/s=1,031,747.38 | call_ms p50=0 p95=0.001 p99=0.002 max=0.019 | lag p99=0.001 maxDrift=0 | outBytes=1,024 ratio=1
+compression zlib-zstdSync size=1KB ops=2000 | wall=27.47ms ops/s=72,806.81 | call_ms p50=0.011 p95=0.02 p99=0.054 max=0.817
+compression dsh-encodeData size=8KB ops=2000 | wall=45.87ms ops/s=43,598.63 | call_ms p50=0.014 p95=0.033 p99=0.076 max=5.768 | lag p99=0.001 maxDrift=0 | outBytes=178 ratio=0.022
+compression zlib-zstdSync size=8KB ops=2000 | wall=45.3ms ops/s=44,150.72 | call_ms p50=0.016 p95=0.06 p99=0.14 max=1.489
+compression dsh-decodeData size=8KB ops=2000 | wall=17.75ms ops/s=112,658.07 | call_ms p50=0.006 p99=0.039 max=0.435 | lag p99=0.001 maxDrift=0
+compression dsh-encodeData size=64KB ops=2000 | wall=90.58ms ops/s=22,078.98 | call_ms p50=0.028 p95=0.119 p99=0.233 max=0.967 | lag p99=0.001 maxDrift=0 | outBytes=178 ratio=0.003
+compression zlib-zstdSync size=64KB ops=2000 | wall=156.33ms ops/s=12,793.27 | call_ms p50=0.048 p95=0.194 p99=0.615 max=6.274
+compression dsh-decodeData size=64KB ops=2000 | wall=49.7ms ops/s=40,238.14 | call_ms p50=0.015 p99=0.147 max=2.673 | lag p99=0.001 maxDrift=0
+compression dsh-encodeData size=1MB ops=2000 | wall=592.22ms ops/s=3,377.1 | call_ms p50=0.176 p95=0.691 p99=1.558 max=15.212 | lag p99=0.001 maxDrift=0 | outBytes=264 ratio=0
+compression zlib-zstdSync size=1MB ops=2000 | wall=1,414.75ms ops/s=1,413.68 | call_ms p50=0.481 p95=1.668 p99=3.67 max=89.71
+compression dsh-decodeData size=1MB ops=2000 | wall=790.78ms ops/s=2,529.15 | call_ms p50=0.272 p99=1.219 max=97.519 | lag p99=0.001 maxDrift=0
+compression dsh-bindRecord ops=2000 | wall=6.89ms ops/s=290,217.84 | call_ms p50=0.001 p99=0.006 max=3.415
+compression batch-simulation (~1MB row + 60 scalar rows) | wall=0.28ms | maxDrift=0ms lagP99=0.001ms
+

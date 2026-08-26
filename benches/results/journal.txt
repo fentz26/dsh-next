@@ -1,0 +1,18 @@
+# dsh-next benchmarks
+# cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness
+# trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
+
+## journal
+journal tiny-64B impl=ts-reference | appends=100000 | append_ops/s=31,431,300 | read_ops/s=961
+journal tiny-64B impl=ts-segmented | appends=100000 | append_ops/s=19,180,513 | read_ops/s=3,874,561
+journal tiny-64B impl=native-rust | appends=100000 | append_ops/s=6,792,344 | read_ops/s=26,223
+journal-ffi-batching tiny-64B n=100000 | single_crossings ops/s=6,387,005 | batched_512 ops/s=9,215,953 | speedup=1.44x
+journal small-1KB impl=ts-reference | appends=100000 | append_ops/s=644,796 | read_ops/s=2,009
+journal small-1KB impl=ts-segmented | appends=100000 | append_ops/s=5,526,605 | read_ops/s=4,141,001
+journal small-1KB impl=native-rust | appends=100000 | append_ops/s=5,106,796 | read_ops/s=119,284
+journal-ffi-batching small-1KB n=100000 | single_crossings ops/s=3,637,515 | batched_512 ops/s=4,800,259 | speedup=1.32x
+journal large-64KB impl=ts-reference | appends=100000 | append_ops/s=11,901,633 | read_ops/s=3,467
+journal large-64KB impl=ts-segmented | appends=100000 | append_ops/s=477,732 | read_ops/s=93,901
+journal large-64KB impl=native-rust | appends=100000 | append_ops/s=814,694 | read_ops/s=1,499
+journal-ffi-batching large-64KB n=100000 | single_crossings ops/s=19,060 | batched_512 ops/s=54,248 | speedup=2.85x
+

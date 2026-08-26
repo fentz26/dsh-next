@@ -1,0 +1,22 @@
+# dsh-next benchmarks
+# cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness
+# trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
+
+## collector
+collector-push impl=dsh-collector | stream=64MiB | wall=2.39ms | throughput=26,808.6MiB/s | cpu=4.36ms | rss=77.2MiB | lag p99=0.001 maxDrift=0
+collector-observers impl=dsh-collector n=1 | reads=3,000 | wall=1,043.05ms | read_us p50=303.2 p95=558.1 p99=861.5 max=2,804.3 | cpu=959.14ms
+collector-observers impl=dsh-collector n=10 | reads=30,000 | wall=8,302.33ms | read_us p50=252.3 p95=411.6 p99=575.4 max=3,661.1 | cpu=8,055.82ms
+collector-push impl=ts-reference | stream=64MiB | wall=2.49ms | throughput=25,718.3MiB/s | cpu=4.69ms | rss=173.1MiB | lag p99=0.001 maxDrift=0
+collector-observers impl=ts-reference n=1 | reads=3,000 | wall=830.04ms | read_us p50=257.4 p95=402.5 p99=517.8 max=838.7 | cpu=817.44ms
+collector-observers impl=ts-reference n=10 | reads=30,000 | wall=7,944.95ms | read_us p50=248.7 p95=392.9 p99=548 max=1,803.6 | cpu=7,765.46ms
+collector-push impl=ts-segmented | stream=64MiB | wall=12.58ms | throughput=5,086.9MiB/s | cpu=22.1ms | rss=208.9MiB | lag p99=0.001 maxDrift=0
+collector-observers impl=ts-segmented n=1 | reads=3,000 | wall=2.52ms | read_us p50=0.4 p95=0.4 p99=0.5 max=489.6 | cpu=3.35ms
+collector-observers impl=ts-segmented n=10 | reads=30,000 | wall=13.16ms | read_us p50=0.3 p95=0.6 p99=0.6 max=246.7 | cpu=30.24ms
+collector-push impl=native-rust | stream=64MiB | wall=3.39ms | throughput=18,900.9MiB/s | cpu=3.64ms | rss=218.7MiB | lag p99=0.001 maxDrift=0
+collector-observers impl=native-rust n=1 | reads=3,000 | wall=3.9ms | read_us p50=0.9 p95=1 p99=1.8 max=780.3 | cpu=4.03ms
+collector-observers impl=native-rust n=10 | reads=30,000 | wall=29.52ms | read_us p50=0.8 p95=1 p99=2.1 max=241.9 | cpu=32.89ms
+collector-x100 impl=dsh-collector | total=200MiB | wall=1.49ms | throughput=134,033.3MiB/s | rss=225.3MiB | lag p99=0.001 maxDrift=0
+collector-x100 impl=ts-reference | total=200MiB | wall=2.05ms | throughput=97,422.4MiB/s | rss=225.6MiB | lag p99=0.001 maxDrift=0
+collector-x100 impl=ts-segmented | total=200MiB | wall=36.77ms | throughput=5,438.7MiB/s | rss=385.5MiB | lag p99=0.001 maxDrift=0
+collector-x100 impl=native-rust | total=200MiB | wall=43.45ms | throughput=4,603.2MiB/s | rss=588MiB | lag p99=0.001 maxDrift=0
+

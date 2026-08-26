@@ -1,0 +1,12 @@
+{
+  "name": "@dsh-next/native",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Native module loader with availability probing and fallback diagnostics",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@dsh-next/journal": "workspace:*"
+  }
+}
