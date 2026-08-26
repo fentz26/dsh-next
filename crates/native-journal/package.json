@@ -1,0 +1,22 @@
+{
+  "name": "@dsh-next/native-journal",
+  "version": "0.0.1",
+  "private": true,
+  "description": "napi-rs bindings for the native bounded byte journal pilot",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "binaryName": "dsh-next-native-journal",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin"
+    ]
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

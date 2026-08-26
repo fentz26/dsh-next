@@ -1,0 +1,16 @@
+[package]
+name = "dsh-next-native-journal"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Native bounded byte journal pilot for dsh-next"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "2", default-features = false, features = ["napi4"] }
+napi-derive = "2"
+
+[profile.release]
+lto = true
