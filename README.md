@@ -69,21 +69,20 @@ cd crates/native-journal && cargo build --release \
   && cp target/release/libdsh_next_native_journal.dylib pilot.node
 ```
 
-## Phase 0 status
+## Program status
 
-See [docs/baseline-results.md](docs/baseline-results.md) for measured results
-and the final decision record. Short version:
+Evidence-gated tracks (gates in each doc; ADRs in [docs/adr.md](docs/adr.md)):
 
-* SQLite persistence: healthy throughput (350–500k events/s at realistic
-  batch sizes); loop stalls ≤ ~5 ms single-session; ~17–25 ms loop lag under
-  50 concurrent sessions. Compression is not the bottleneck.
-* The measured structural hotspot is **read-path materialization**
-  (`OutputCollector.readFrom` concatenates the whole window per read:
-  ~250–300 µs/call vs ~0.3–1 µs for segment-based designs ≈ 300–700×,
-  seconds of main-thread time under observer polling).
-* An optimized **TypeScript** segmented journal captures most of that win; the
-  Rust pilot matches semantics and is competitive on mixed workloads but does
-  not dominate the best TS on pure reads (zero-copy subarrays beat the FFI
-  copy-out).
+| Track | Status | Doc |
+|---|---|---|
+| A — Segmented journal | **JOURNAL READY** — `segmented-ts` default, native experimental | [journal.md](docs/journal.md) |
+| B — Worker persistence | **PROCEED** — main-loop lag ~1 ms vs 17–50 ms; differential suite green | [persistence-worker.md](docs/persistence-worker.md) |
+| C — Giant-session resume | **ARCHITECTURAL SEAM REQUIRED** — expansion dominates; designs ranked | [resume-acceleration.md](docs/resume-acceleration.md) |
+| D — Projection caches | absorbed into Track C design (revision-keyed cache rules) | resume-acceleration.md |
+| E — Native primitives | narrowly scoped (journal pilot only); per-ADR-001 rules | adr.md |
+| F — Durable execution | state model/commit boundary/crash classes specified; no code yet | [durable-execution.md](docs/durable-execution.md) |
+| G — Supervisor | design note only (sidecar rationale) | [supervisor-design-note.md](docs/supervisor-design-note.md) |
+| H — Diagnostics/benchmarks | `pnpm diagnostics`, `pnpm bench [--json]` | benchmark-methodology.md |
+| I — Compat/distribution | version floor + degradation matrix documented | [compatibility.md](docs/compatibility.md) |
 
-Decision: **LIMIT RUST TO SPECIFIC COMPONENTS** — see the results document.
+Phase 0 history and baseline tables: [docs/baseline-results.md](docs/baseline-results.md).
