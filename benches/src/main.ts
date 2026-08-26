@@ -31,12 +31,20 @@ function machineInfo(): string {
 }
 
 async function main(): Promise<void> {
-  const requested = process.argv.slice(2)
+  const argv = process.argv.slice(2)
+  const jsonMode = argv.includes('--json')
+  const requested = argv.filter((a) => !a.startsWith('--'))
   const names = requested.length > 0 ? requested : Object.keys(RUNNERS)
 
   console.log(`# dsh-next benchmarks`)
   console.log(`# ${machineInfo()}`)
-  console.log(`# trials=${process.env.BENCH_TRIALS ?? 3} (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)`)
+  console.log(
+    `# trials=${process.env.BENCH_TRIALS ?? 3} (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)`,
+  )
+  if (jsonMode) {
+    const { startJsonCapture } = await import('./harness/json-capture.ts')
+    startJsonCapture({ machine: machineInfo(), trials: Number(process.env.BENCH_TRIALS ?? 3) })
+  }
   console.log()
 
   for (const name of names) {
@@ -49,6 +57,12 @@ async function main(): Promise<void> {
     console.log(`## ${name}`)
     await runner()
     console.log()
+  }
+
+  if (jsonMode) {
+    const { writeJsonCapture } = await import('./harness/json-capture.ts')
+    const out = writeJsonCapture(process.env.BENCH_JSON_OUT)
+    if (out !== undefined) console.log(`# json results written to ${out}`)
   }
 }
 

@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "machine": "cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness",
+    "trials": 3
+  },
+  "records": [
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.533Z",
+      "compression dsh-encodeData size": "1KB ops=100",
+      "wall": "0.73ms ops/s=136,317.04",
+      "call_ms p50": "0 p95=0.002 p99=0.008 max=0.03",
+      "lag p99": "0.001 canaryP99=NaN canaryMax=0 drift=0",
+      "outBytes": "1,024 ratio=1"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.541Z",
+      "compression zlib-zstdSync size": "1KB ops=100",
+      "wall": "7.07ms ops/s=14,142.94",
+      "call_ms p50": "0.013 p95=0.085 p99=0.394 max=4.229"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.545Z",
+      "compression dsh-encodeData size": "8KB ops=100",
+      "wall": "3.3ms ops/s=30,264.81",
+      "call_ms p50": "0.021 p95=0.06 p99=0.123 max=0.137",
+      "lag p99": "0.001 canaryP99=NaN canaryMax=0 drift=0",
+      "outBytes": "178 ratio=0.022"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.549Z",
+      "compression zlib-zstdSync size": "8KB ops=100",
+      "wall": "3.2ms ops/s=31,284.22",
+      "call_ms p50": "0.02 p95=0.082 p99=0.121 max=0.223"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.552Z",
+      "compression dsh-decodeData size": "8KB ops=100",
+      "wall": "3.05ms ops/s=32,781.51",
+      "call_ms p50": "0.009 p99=0.461 max=1.292",
+      "lag p99": "0.001 canaryP99=NaN canaryMax=0 drift=0"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.562Z",
+      "compression dsh-encodeData size": "64KB ops=100",
+      "wall": "8.55ms ops/s=11,696.88",
+      "call_ms p50": "0.056 p95=0.227 p99=0.249 max=0.309",
+      "lag p99": "0.001 canaryP99=NaN canaryMax=0 drift=0",
+      "outBytes": "178 ratio=0.003"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.576Z",
+      "compression zlib-zstdSync size": "64KB ops=100",
+      "wall": "13.37ms ops/s=7,478.8",
+      "call_ms p50": "0.07 p95=0.471 p99=0.731 max=0.771"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.582Z",
+      "compression dsh-decodeData size": "64KB ops=100",
+      "wall": "6.3ms ops/s=15,868.92",
+      "call_ms p50": "0.03 p99=0.518 max=1.916",
+      "lag p99": "0.001 canaryP99=NaN canaryMax=0 drift=0"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.624Z",
+      "compression dsh-encodeData size": "1MB ops=100",
+      "wall": "35.55ms ops/s=2,813.01",
+      "call_ms p50": "0.254 p95=0.884 p99=2.206 max=2.686",
+      "lag p99": "0.001 canaryP99=NaN canaryMax=0 drift=0",
+      "outBytes": "264 ratio=0"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.654Z",
+      "compression zlib-zstdSync size": "1MB ops=100",
+      "wall": "29.53ms ops/s=3,386.46",
+      "call_ms p50": "0.24 p95=0.567 p99=0.868 max=1.065"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.694Z",
+      "compression dsh-decodeData size": "1MB ops=100",
+      "wall": "39.16ms ops/s=2,553.76",
+      "call_ms p50": "0.238 p99=3.954 max=6.558",
+      "lag p99": "0.001 canaryP99=NaN canaryMax=0 drift=0"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.695Z",
+      "compression dsh-bindRecord ops": 100,
+      "wall": "0.43ms ops/s=230,791.78",
+      "call_ms p50": "0.001 p99=0.062 max=0.127"
+    },
+    {
+      "benchmark": "compression",
+      "timestamp": "2026-08-26T23:34:37.696Z",
+      "message": "compression batch-simulation (~1MB row + 60 scalar rows)",
+      "wall": "0.22ms",
+      "canaryP99": "NaN canaryMax=0 canaryP99=NaN canaryMax=0 drift=0ms lagP99=0.001ms"
+    }
+  ]
+}
