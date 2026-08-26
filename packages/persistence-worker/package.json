@@ -1,0 +1,12 @@
+{
+  "name": "@dsh-next/persistence-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Worker-thread-owned SQLite session persistence backend (Track B)",
+  "type": "module",
+  "main": "./src/backend.ts",
+  "types": "./src/backend.ts",
+  "dependencies": {
+    "@dsh-next/journal": "workspace:*"
+  }
+}

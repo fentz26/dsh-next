@@ -1,0 +1,48 @@
+# dsh-next benchmarks
+# cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness
+# trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
+
+## persistence-worker
+persist-stock total=10000 batch=50 trial=0 | wall=120.02ms | cpuMain=135.03ms | rss=97.7MiB | events/s=83,318.17 | batch_ms p50=0.444 p95=0.888 p99=1.539 max=4.86 | lag mean=1.04 p95=1.562 p99=1.789 canaryMax=5.969
+persist-worker total=10000 batch=50 trial=0 | wall=103.01ms | cpuMain=155.39ms | cpuWorker=147.56ms | rss=125.4MiB | events/s=97,077.44 | batch_ms p50=0.454 p95=0.798 p99=1.24 max=2.373 | lag mean=1 p95=1.019 p99=1.063 canaryMax=2.41
+persist-stock total=10000 batch=50 trial=1 | wall=232.06ms | cpuMain=197.38ms | rss=115.4MiB | events/s=43,092.14 | batch_ms p50=0.927 p95=2.233 p99=3.465 max=13.62 | lag mean=1.417 p95=2.757 p99=4.235 canaryMax=13.67
+persist-worker total=10000 batch=50 trial=1 | wall=176.98ms | cpuMain=229.85ms | cpuWorker=223.02ms | rss=136.4MiB | events/s=56,504.6 | batch_ms p50=0.828 p95=1.27 p99=1.799 max=11.853 | lag mean=0.995 p95=1.026 p99=1.118 canaryMax=0
+persist-stock total=10000 batch=50 trial=2 | wall=194.34ms | cpuMain=165.55ms | rss=106.3MiB | events/s=51,457.18 | batch_ms p50=0.711 p95=1.765 p99=3.194 max=12.021 | lag mean=1.299 p95=2.22 p99=5.247 canaryMax=12.077
+persist-worker total=10000 batch=50 trial=2 | wall=419.76ms | cpuMain=275.14ms | cpuWorker=273.87ms | rss=130.6MiB | events/s=23,823.04 | batch_ms p50=0.836 p95=1.966 p99=14.303 max=138.598 | lag mean=1.001 p95=1.044 p99=1.302 canaryMax=2.273
+persist-stock total=10000 batch=200 trial=0 | wall=57ms | cpuMain=58.72ms | rss=112MiB | events/s=175,446.42 | batch_ms p50=1.093 p95=1.338 p99=1.368 max=1.368 | lag mean=1.141 p95=1.841 p99=1.931 canaryMax=1.861
+persist-worker total=10000 batch=200 trial=0 | wall=73.39ms | cpuMain=107.6ms | cpuWorker=111.01ms | rss=134.5MiB | events/s=136,261.29 | batch_ms p50=1.408 p95=1.725 p99=2.665 max=2.665 | lag mean=0.995 p95=1.011 p99=1.062 canaryMax=1.846
+persist-stock total=10000 batch=200 trial=1 | wall=62.46ms | cpuMain=66.74ms | rss=116.4MiB | events/s=160,111.97 | batch_ms p50=1.123 p95=1.526 p99=1.96 max=1.96 | lag mean=1.247 p95=2.015 p99=2.179 canaryMax=2.203
+persist-worker total=10000 batch=200 trial=1 | wall=67.85ms | cpuMain=92.74ms | cpuWorker=115.61ms | rss=139.2MiB | events/s=147,388.1 | batch_ms p50=1.281 p95=1.907 p99=2.408 max=2.408 | lag mean=0.998 p95=1.047 p99=1.089 canaryMax=1.524
+persist-stock total=10000 batch=200 trial=2 | wall=63.48ms | cpuMain=53.57ms | rss=117.9MiB | events/s=157,523 | batch_ms p50=0.972 p95=2.326 p99=2.555 max=2.555 | lag mean=1.369 p95=2.628 p99=3.486 canaryMax=2.634
+persist-worker total=10000 batch=200 trial=2 | wall=65.96ms | cpuMain=93.41ms | cpuWorker=100.24ms | rss=135.4MiB | events/s=151,609.24 | batch_ms p50=1.216 p95=1.568 p99=2.675 max=2.675 | lag mean=0.999 p95=1.065 p99=1.078 canaryMax=3.298
+persist-stock total=100000 batch=50 trial=0 | wall=768.65ms | cpuMain=783.7ms | rss=156.3MiB | events/s=130,097.74 | batch_ms p50=0.259 p95=0.615 p99=1.578 max=9.616 | lag mean=1.117 p95=1.524 p99=5.12 canaryMax=23.778
+persist-worker total=100000 batch=50 trial=0 | wall=801.4ms | cpuMain=1,042.06ms | cpuWorker=746.58ms | rss=205MiB | events/s=124,781.12 | batch_ms p50=0.334 p95=0.526 p99=1.066 max=13.395 | lag mean=1.013 p95=1.025 p99=1.122 canaryMax=23.006
+persist-stock total=100000 batch=50 trial=1 | wall=871.06ms | cpuMain=852.93ms | rss=199MiB | events/s=114,803.2 | batch_ms p50=0.257 p95=0.825 p99=1.429 max=15.124 | lag mean=1.229 p95=1.588 p99=11.993 canaryMax=19.033
+persist-worker total=100000 batch=50 trial=1 | wall=909.5ms | cpuMain=1,119.21ms | cpuWorker=876.26ms | rss=225.1MiB | events/s=109,951.05 | batch_ms p50=0.341 p95=0.787 p99=1.17 max=13.566 | lag mean=1.001 p95=1.032 p99=1.179 canaryMax=17.902
+persist-stock total=100000 batch=50 trial=2 | wall=698.15ms | cpuMain=756.27ms | rss=228.8MiB | events/s=143,236.57 | batch_ms p50=0.249 p95=0.528 p99=0.871 max=5.763 | lag mean=1.071 p95=1.468 p99=4.862 canaryMax=22.634
+persist-worker total=100000 batch=50 trial=2 | wall=987.49ms | cpuMain=1,184.49ms | cpuWorker=924.25ms | rss=259MiB | events/s=101,266.5 | batch_ms p50=0.337 p95=0.961 p99=1.494 max=13.643 | lag mean=1.002 p95=1.033 p99=1.2 canaryMax=23.272
+persist-stock total=100000 batch=200 trial=0 | wall=484ms | cpuMain=373.25ms | rss=238.8MiB | events/s=206,613.03 | batch_ms p50=0.337 p95=1.78 p99=13.749 max=42.383 | lag mean=1.823 p95=3.391 p99=33.882 canaryMax=42.423
+persist-worker total=100000 batch=200 trial=0 | wall=599.88ms | cpuMain=643.08ms | cpuWorker=431.02ms | rss=259.7MiB | events/s=166,700.56 | batch_ms p50=0.615 p95=2.419 p99=5.864 max=49.274 | lag mean=1.008 p95=1.066 p99=1.223 canaryMax=17.072
+persist-stock total=100000 batch=200 trial=1 | wall=557.77ms | cpuMain=439.4ms | rss=251MiB | events/s=179,285.76 | batch_ms p50=0.339 p95=2.715 p99=8.256 max=45.965 | lag mean=2.123 p95=4.223 p99=36.471 canaryMax=46.446
+persist-worker total=100000 batch=200 trial=1 | wall=600.01ms | cpuMain=662.87ms | cpuWorker=475.54ms | rss=261.9MiB | events/s=166,664.44 | batch_ms p50=0.624 p95=1.625 p99=4.975 max=43.845 | lag mean=1.011 p95=1.074 p99=1.263 canaryMax=15.04
+persist-stock total=100000 batch=200 trial=2 | wall=428.34ms | cpuMain=385.17ms | rss=205.2MiB | events/s=233,457.86 | batch_ms p50=0.341 p95=2.167 p99=4.388 max=39 | lag mean=1.703 p95=3.389 p99=20.333 canaryMax=39.047
+persist-worker total=100000 batch=200 trial=2 | wall=700.97ms | cpuMain=735.06ms | cpuWorker=541.19ms | rss=196.9MiB | events/s=142,660.39 | batch_ms p50=0.632 p95=2.955 p99=7.578 max=51.541 | lag mean=1.002 p95=1.068 p99=1.244 canaryMax=19.269
+persist-conc-stock n=1 trial=0 | wall=18.64ms | cpuMain=15.5ms | rss=181MiB | batch_ms p50=0.781 p95=1.272 p99=1.741 max=1.741 | lag mean=1.024 p95=1.506 p99=1.762 canaryMax=1.791
+persist-conc-worker n=1 trial=0 | wall=28.15ms | cpuMain=33.79ms | cpuWorker=51.54ms | rss=203.3MiB | batch_ms p50=1.096 p95=2.414 p99=3.083 max=3.083 | lag mean=0.999 p95=1.065 p99=1.074 canaryMax=0
+persist-conc-stock n=1 trial=1 | wall=24.4ms | cpuMain=14.98ms | rss=184.6MiB | batch_ms p50=0.78 p95=3.312 p99=4.06 max=4.06 | lag mean=1.394 p95=2.669 p99=4.112 canaryMax=4.093
+persist-conc-worker n=1 trial=1 | wall=34.18ms | cpuMain=34.23ms | cpuWorker=54.98ms | rss=204MiB | batch_ms p50=1.046 p95=3.769 p99=5.525 max=5.525 | lag mean=0.998 p95=1.02 p99=1.054 canaryMax=0
+persist-conc-stock n=1 trial=2 | wall=16.32ms | cpuMain=15.18ms | rss=183.1MiB | batch_ms p50=0.707 p95=0.879 p99=2.123 max=2.123 | lag mean=1.101 p95=1.499 p99=2.169 canaryMax=2.177
+persist-conc-worker n=1 trial=2 | wall=25.09ms | cpuMain=31.76ms | cpuWorker=50.47ms | rss=202MiB | batch_ms p50=1.078 p95=1.528 p99=4.089 max=4.089 | lag mean=0.991 p95=1.011 p99=1.155 canaryMax=0
+persist-conc-stock n=10 trial=0 | wall=127.19ms | cpuMain=115.31ms | rss=188.2MiB | batch_ms p50=0.535 p95=0.931 p99=1.767 max=12.104 | lag mean=6.483 p95=10.396 p99=16.073 canaryMax=15.443
+persist-conc-worker n=10 trial=0 | wall=156.58ms | cpuMain=202.19ms | cpuWorker=195.49ms | rss=176.9MiB | batch_ms p50=8.48 p95=11.822 p99=16.507 max=17.62 | lag mean=1.002 p95=1.055 p99=1.274 canaryMax=1.157
+persist-conc-stock n=10 trial=1 | wall=93.65ms | cpuMain=84.57ms | rss=108MiB | batch_ms p50=0.412 p95=0.737 p99=1.137 max=5.119 | lag mean=4.733 p95=7.709 p99=7.778 canaryMax=7.706
+persist-conc-worker n=10 trial=1 | wall=127.36ms | cpuMain=172.61ms | cpuWorker=165.78ms | rss=137.3MiB | batch_ms p50=5.779 p95=11.129 p99=12.29 max=13.1 | lag mean=1.013 p95=1.13 p99=1.694 canaryMax=2.474
+persist-conc-stock n=10 trial=2 | wall=72.38ms | cpuMain=69.7ms | rss=118.6MiB | batch_ms p50=0.315 p95=0.432 p99=0.496 max=3.472 | lag mean=3.701 p95=4.96 p99=6.267 canaryMax=6.277
+persist-conc-worker n=10 trial=2 | wall=194.51ms | cpuMain=252.94ms | cpuWorker=242.68ms | rss=139.2MiB | batch_ms p50=11.202 p95=14.38 p99=28.269 max=29.8 | lag mean=1 p95=1.046 p99=1.172 canaryMax=1.074
+persist-conc-stock n=50 trial=0 | wall=979.57ms | cpuMain=475.28ms | rss=126.8MiB | batch_ms p50=0.296 p95=1.01 p99=14.333 max=404.758 | lag mean=50.053 p95=35.848 p99=517.997 canaryMax=517.954
+persist-conc-worker n=50 trial=0 | wall=553.77ms | cpuMain=702.93ms | cpuWorker=581.17ms | rss=161.6MiB | batch_ms p50=23.68 p95=44.661 p99=53.324 max=56.904 | lag mean=1 p95=1.09 p99=1.27 canaryMax=2.026
+persist-conc-stock n=50 trial=1 | wall=565.73ms | cpuMain=427.66ms | rss=137.3MiB | batch_ms p50=0.299 p95=1.131 p99=5.041 max=23.305 | lag mean=27.296 p95=40.763 p99=56.82 canaryMax=57.438
+persist-conc-worker n=50 trial=1 | wall=2,010ms | cpuMain=992.12ms | cpuWorker=875.47ms | rss=169MiB | batch_ms p50=31.268 p95=720.981 p99=1,421.412 max=1,421.527 | lag mean=1.001 p95=1.056 p99=1.449 canaryMax=1.915
+persist-conc-stock n=50 trial=2 | wall=447.88ms | cpuMain=425.8ms | rss=143.7MiB | batch_ms p50=0.292 p95=0.808 p99=1.673 max=12.413 | lag mean=21.815 p95=31.638 p99=38.47 canaryMax=39.761
+persist-conc-worker n=50 trial=2 | wall=480ms | cpuMain=629.69ms | cpuWorker=504.15ms | rss=172.3MiB | batch_ms p50=22.564 p95=31.463 p99=32.976 max=34.182 | lag mean=1.001 p95=1.061 p99=1.246 canaryMax=2.382
+

@@ -79,7 +79,11 @@ export function diagnosticReport(extra?: Record<string, string>): string {
     `  native-rust: ${nativeLabel}`,
     `  selected: segmented-ts`,
     `  nativeBenchmarkRecommended: false`,
-    `persistence: stock | worker (track B)`,
+    'persistence:',
+    `  stock-sync: available`,
+    `  worker: available (main-thread lag ~1 ms vs 17–50 ms under concurrency)`,
+    `  native: not built (rusqlite gate not triggered)`,
+    `  selected: stock (bundle default) / worker recommended`,
     `resume: checkpoint cache — design stage`,
     `supervisor: off`,
   ]
