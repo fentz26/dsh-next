@@ -1,0 +1,7 @@
+node_modules/
+target/
+*.tsbuildinfo
+.DS_Store
+crates/native-journal/pilot.node
+crates/native-journal/index.js
+crates/native-journal/index.d.ts

@@ -1,0 +1,27 @@
+{
+  "name": "dsh-next-monorepo",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Performance-oriented backend/runtime modernization layer for DeepSeek Harness. Rust where benchmarks justify it, TypeScript everywhere else.",
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "bench": "tsx benches/src/main.ts",
+    "bench:persistence": "tsx benches/src/main.ts persistence-append",
+    "bench:cold-load": "tsx benches/src/main.ts cold-load",
+    "bench:compression": "tsx benches/src/main.ts compression",
+    "bench:collector": "tsx benches/src/main.ts output-collector",
+    "bench:journal": "tsx benches/src/main.ts journal",
+    "test": "tsx packages/journal/tests/journal.test.ts && tsx crates/native-journal/__test__/differential.test.ts",
+    "diagnostics": "tsx -e \"import { diagnosticReport } from './packages/native/src/index.ts'; console.log(diagnosticReport())\"",
+    "build:native": "cd crates/native-journal && cargo build --release && cp target/release/libdsh_next_native_journal.dylib pilot.node"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "typescript": "^5.9",
+    "tsx": "^4.23"
+  }
+}
