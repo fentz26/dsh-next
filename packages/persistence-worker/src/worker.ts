@@ -43,7 +43,44 @@ type PendingItem = {
   resolve: (r: WorkerResponse) => void
 }
 
-async function dispatch(store: DshStore | undefined, req: WorkerRequest): Promise<{ result: unknown; store: DshStore | undefined }> {
+interface DispatchOutcome {
+  result?: unknown
+  paged?: Generator<unknown>
+  store?: DshStore
+}
+
+function* streamPages(
+  full: { meta?: unknown; events?: unknown[]; revision?: unknown; tornMarker?: unknown },
+  size: number,
+): Generator<unknown> {
+  const events = full.events ?? []
+  if (events.length === 0) {
+    yield {
+      first: true,
+      last: true,
+      meta: full.meta,
+      revision: full.revision,
+      tornMarker: full.tornMarker,
+      events: [],
+    }
+    return
+  }
+  let idx = 0
+  while (idx < events.length) {
+    const slice = events.slice(idx, idx + size)
+    idx += slice.length
+    yield {
+      first: idx === slice.length,
+      last: idx >= events.length,
+      meta: idx === slice.length ? full.meta : undefined,
+      revision: idx === slice.length ? full.revision : undefined,
+      tornMarker: idx === slice.length ? full.tornMarker : undefined,
+      events: slice,
+    }
+  }
+}
+
+async function dispatch(store: DshStore | undefined, req: WorkerRequest): Promise<DispatchOutcome> {
   switch (req.op) {
     case 'open': {
       if (store !== undefined) throw new Error('store already opened')
@@ -62,6 +99,25 @@ async function dispatch(store: DshStore | undefined, req: WorkerRequest): Promis
     }
     case 'loadStored':
       return { result: await requireStore(store).loadStored(req.payload), store }
+    case 'loadStoredPaged': {
+      // Decode once inside the worker, then stream fixed-size pages as separate
+      // frames sharing the request seq. Each frame carries a `last` flag; the
+      // first carries meta/revision/tornMarker. Page-by-page transfer avoids
+      // one gigantic structured-clone message (measured ~10x worse for 1M+
+      // events) and bounds peak main-thread heap per page.
+      const s = requireStore(store)
+      const [id, pageSize] = req.payload
+      const full = (await s.loadStored(id)) as {
+        meta?: unknown
+        events?: unknown[]
+        revision?: unknown
+        tornMarker?: unknown
+      }
+      return {
+        paged: streamPages(full, Math.max(1, Math.floor(pageSize))),
+        store,
+      } as never
+    }
     case 'loadStoredFrom': {
       const [id, fromSeq] = req.payload
       return { result: await requireStore(store).loadStoredFrom(id, fromSeq), store }
@@ -108,13 +164,24 @@ async function main(): Promise<void> {
         const startCpu = cpuNow()
         let response: WorkerResponse
         try {
-          const { result, store: next } = await dispatch(store, item.req)
-          store = next
+          const out = await dispatch(store, item.req)
+          store = out.store
+          if (out.paged !== undefined) {
+            // Paged op: stream one frame per page; the page carrying
+            // `last:true` is the final frame for this seq. No single-frame
+            // response is emitted.
+            for (const page of out.paged) {
+              port.postMessage({
+                res: { seq: item.req.seq, ok: true, result: page } satisfies WorkerResponse,
+              })
+            }
+            continue
+          }
           const now = cpuNow()
           response = {
             seq: item.req.seq,
             ok: true,
-            result,
+            result: out.result,
             workerCpu: {
               userMs: now.userMs - startCpu.userMs,
               systemMs: now.systemMs - startCpu.systemMs,

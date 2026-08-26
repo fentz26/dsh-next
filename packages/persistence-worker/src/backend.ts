@@ -45,6 +45,16 @@ export interface BackendStats {
   failed: boolean
 }
 
+export interface PagedLoaded {
+  meta: unknown
+  revision: unknown
+  tornMarker?: unknown
+  events: unknown[]
+}
+
+/** Safety valve so a malformed/unflagged stream can never hang the caller. */
+const MAX_PAGES_SAFETY = 1_000_000
+
 export class WorkerSqliteBackend {
   private worker!: Worker
   private seq = 0
@@ -158,6 +168,80 @@ export class WorkerSqliteBackend {
   async killForTest(): Promise<void> {
     if (!this.worker) throw new Error('worker not initialized')
     await this.terminateNow(0)
+  }
+
+  /**
+   * Giant-log friendly reconstruction: identical logical result to loadStored,
+   * streamed as fixed-size pages so neither a single gigantic clone nor the
+   * full graph must exist on both sides simultaneously. `pageSize` is events
+   * per frame (default 20k).
+   */
+  loadStoredPaged(id: string, pageSize = 20_000, signal?: AbortSignal): Promise<PagedLoaded> {
+    if (signal?.aborted) return Promise.reject(signal.reason ?? new Error('aborted before loadStoredPaged'))
+    if (this.failed) return Promise.reject(new WorkerPersistenceError('persistence worker previously failed'))
+    return this.waitForPages(id, pageSize, signal)
+  }
+
+  // ---- internals: paged accumulation ----
+
+  private waitForPages(
+    id: string,
+    pageSize: number,
+    signal?: AbortSignal,
+  ): Promise<PagedLoaded> {
+    const seq = ++this.seq
+    return new Promise<PagedLoaded>((resolve, reject) => {
+      const acc: PagedLoaded = { meta: undefined, revision: undefined, events: [] }
+      let tornMarker: unknown
+      let anyMarker = false
+      this.pending.set(seq, { reject })
+      this.inFlight++
+      this.stats_.requestsDispatched++
+      let received = 0
+      const listener = (res: WorkerResponse): void => {
+        received++
+        if (res.workerCpu) {
+          this.stats_.workerCpuUserMs += res.workerCpu.userMs
+          this.stats_.workerCpuSystemMs += res.workerCpu.systemMs
+        }
+        if (!res.ok) {
+          cleanup()
+          reject(new WorkerPersistenceError(res.error.message))
+          return
+        }
+        const page = res.result as {
+          first?: boolean
+          last?: boolean
+          meta?: unknown
+          revision?: unknown
+          tornMarker?: unknown
+          events?: unknown[]
+        }
+        if (page.first && !anyMarker) {
+          anyMarker = true
+          acc.meta = page.meta
+          acc.revision = page.revision
+          if (page.tornMarker !== undefined) tornMarker = page.tornMarker
+        }
+        acc.events.push(...(page.events ?? []))
+        if (page.last || received > MAX_PAGES_SAFETY) {
+          cleanup()
+          this.inFlight--
+          const wake = this.waitQueue.shift()
+          if (wake !== undefined) wake()
+          resolve(anyMarker ? (tornMarker !== undefined ? { ...acc, tornMarker } : acc) : { ...acc })
+          return
+        }
+      }
+      const cleanup = (): void => {
+        ;(this.worker as Worker).off(`res:${seq}`, listener)
+        this.pending.delete(seq)
+      }
+      void signal
+      ;(this.worker as Worker).on(`res:${seq}`, listener)
+      const wire: WorkerWireRequest = { seq, op: 'loadStoredPaged', payload: [id, pageSize] }
+      this.worker.postMessage({ req: wire })
+    })
   }
 
   // ---- internals ----

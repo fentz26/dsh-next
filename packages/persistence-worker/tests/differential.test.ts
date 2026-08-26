@@ -160,6 +160,15 @@ await check('readFrom suffix reads identical', async () => {
   if ((s as { tornMarker?: unknown }).tornMarker !== undefined) throw new Error('unexpected tear')
 })
 
+await check('paged load equals single-shot load', async () => {
+  const single = (await workerBackend.loadStored(header.id)) as StockLoaded
+  const paged = await workerBackend.loadStoredPaged(header.id, 333)
+  if (JSON.stringify(single.events) !== JSON.stringify(paged.events)) throw new Error('paged divergence')
+  if (JSON.stringify(single.meta) !== JSON.stringify(paged.meta)) throw new Error('paged meta mismatch')
+  if (single.tornMarker !== undefined && paged.tornMarker === undefined)
+    throw new Error('paged lost tornMarker')
+})
+
 await check('list identical', async () => {
   const s = await stock.list()
   const w = (await workerBackend.list()) as unknown[]

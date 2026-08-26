@@ -1,0 +1,17 @@
+# dsh-next benchmarks
+# cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness
+# trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
+
+## resume-worker
+# building 50 MB logical log…
+resume-stock trial=0 | events=1092269 | wall=208.9ms | loadStored=207ms | rss=692.5MiB | lag mean=0.232 p99=0.232 | canaryMax=0
+resume-stock trial=1 | events=1092269 | wall=501.41ms | loadStored=497.5ms | rss=983.9MiB | lag mean=0.193 p99=0.194 | canaryMax=3.03
+resume-stock trial=2 | events=1092269 | wall=202.27ms | loadStored=200.96ms | rss=1,224.4MiB | lag mean=NaN p99=0.001 | canaryMax=0
+resume-worker trial=0 | events=1092269 | wall=3,123.64ms | loadStored=3,044.51ms | cpuWorker=588.3ms | rss=601.6MiB | lag mean=1.036 p99=2.14 | canaryMax=11.167
+resume-worker trial=1 | events=1092269 | wall=2,588.56ms | loadStored=2,517.44ms | cpuWorker=562.91ms | rss=657.6MiB | lag mean=1.032 p99=1.944 | canaryMax=18.279
+resume-worker trial=2 | events=1092269 | wall=3,117.75ms | loadStored=3,050.56ms | cpuWorker=566.71ms | rss=911.8MiB | lag mean=1.024 p99=1.68 | canaryMax=14.147
+resume-worker-paged trial=0 | events=1092269 | wall=1,705.52ms | loadStored=1,633.65ms | cpuWorker=22.85ms | rss=902.8MiB | lag mean=1.036 p99=2.386 | canaryMax=2.827
+resume-worker-paged trial=1 | events=1092269 | wall=2,101.33ms | loadStored=2,026.55ms | cpuWorker=58.67ms | rss=1,090.4MiB | lag mean=1.121 p99=1.586 | canaryMax=33.937
+resume-worker-paged trial=2 | events=1092269 | wall=2,217.89ms | loadStored=2,154.44ms | cpuWorker=24.81ms | rss=910.2MiB | lag mean=1.009 p99=1.353 | canaryMax=3.449
+
+# json results written to benches/results/latest-2026-08-26T23-43-50-990Z.json

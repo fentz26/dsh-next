@@ -14,6 +14,7 @@ export type WorkerRequest =
   | { seq: number; op: 'open'; payload: WorkerOpenOptions }
   | { seq: number; op: 'appendBatch'; payload: [meta: unknown, events: unknown[], isMaterialized: boolean] }
   | { seq: number; op: 'loadStored'; payload: string }
+  | { seq: number; op: 'loadStoredPaged'; payload: [id: string, pageSize: number] }
   | { seq: number; op: 'loadStoredFrom'; payload: [id: string, fromSeq: number] }
   | { seq: number; op: 'readStoredRevision'; payload: string }
   | { seq: number; op: 'commitRepair'; payload: [meta: unknown, tornMarker: unknown, closers: unknown[]] }

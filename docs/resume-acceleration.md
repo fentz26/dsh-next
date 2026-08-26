@@ -39,12 +39,23 @@ defer hydration.
 
 ## Acceleration designs (ranked, evidence-driven)
 
-### 1. Worker-owned reconstruction + repair ordering (available now)
+### 1. Worker-owned reconstruction (measured: stall gone, wall regresses)
 
-Move cold `loadStored` onto the persistence worker (Track B infra): identical
-wall time but zero main-thread stall; harness stays interactive during resume;
-progress can be surfaced through diagnostics. Approved as incremental value; it
-changes *responsiveness*, not volume — honest about scope.
+Measured on the 1.09 M-event fixture after implementing both variants:
+
+| variant | loadStored wall | main-thread lag | verdict |
+|---|---|---|---|
+| stock synchronous | 202–498 ms | entire call blocks | baseline |
+| worker, single clone frame | 2.4–3.1 s (~10×) | ~1 ms flat | regression |
+| worker, paged frames (20k/frame) | 1.7–2.2 s | ~1 ms flat | better, still >2× |
+
+`loadStoredPaged` streams fixed-size event pages (differential-tested 9/9);
+structured-clone cost scales with object count regardless of framing, so
+*transferring* the expanded graph costs strictly more than building it
+in place. Conclusion: graph transfer is a dead end at this scale; only the
+upstream seam below (consumer-side lazy hydration, no bulk transfer) or
+byte-level transports paired with consumer contracts that avoid expansion
+can deliver the structural win.
 
 ### 2. Upstream seam proposal: paged immutable suffix access
 
