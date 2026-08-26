@@ -1,0 +1,10 @@
+# dsh-next benchmarks
+# cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness
+# trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
+
+## resume-stages
+# building 50 MB logical chunk-stream log…
+resume-stages trial=0 | physicalRows=2188 | logicalEvents=1092269 | S1_sqlRead=2.97ms | S2_rowDecode=0.19ms | S3_expand=101.18ms | S4_validate=255.47ms | sum=359.81ms | fullLoadStored=480.46ms | rssBase=372.33MiB rssPeak=215.42MiB | fullLoadCount=1092269
+resume-stages trial=1 | physicalRows=2188 | logicalEvents=1092269 | S1_sqlRead=18.97ms | S2_rowDecode=0.82ms | S3_expand=300.18ms | S4_validate=1,258.48ms | sum=1,578.44ms | fullLoadStored=262.09ms | rssBase=127.91MiB rssPeak=743.39MiB | fullLoadCount=1092269
+resume-stages trial=2 | physicalRows=2188 | logicalEvents=1092269 | S1_sqlRead=2.45ms | S2_rowDecode=0.17ms | S3_expand=119.65ms | S4_validate=976.57ms | sum=1,098.84ms | fullLoadStored=461.29ms | rssBase=742.64MiB rssPeak=759.81MiB | fullLoadCount=1092269
+

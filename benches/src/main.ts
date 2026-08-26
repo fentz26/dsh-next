@@ -14,6 +14,7 @@ const RUNNERS: Record<string, () => Promise<void>> = {
   'persistence-append': async () => (await import('./persistence-append.bench.ts')).persistenceBench(),
   'cold-load': async () => (await import('./cold-load.bench.ts')).coldLoadBench(),
   'persistence-worker': async () => (await import('./persistence-worker.bench.ts')).persistenceWorkerBench(),
+  'resume-stages': async () => (await import('./resume-stages.bench.ts')).resumeStagesBench(),
   compression: async () => (await import('./compression.bench.ts')).compressionBench(),
   collector: async () => (await import('./output-collector.bench.ts')).collectorBench(),
   journal: async () => (await import('./journal.bench.ts')).journalBench(),
