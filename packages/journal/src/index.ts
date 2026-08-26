@@ -23,6 +23,70 @@ export interface JournalRead {
   readonly lossy: boolean
 }
 
+/**
+ * Production journal contract (bytes authoritative; see docs/journal.md).
+ * - `append` accepts any chunk size; bytes are copied once into journal-owned
+ *   segments; returns the new absolute stream length (`nextOffset`).
+ * - `readFrom` is non-consuming with independent readers; lossy reads return
+ *   the whole retained tail.
+ */
+export interface ByteJournal {
+  readonly maxBytes: number
+  readonly nextOffset: number
+  readonly windowStart: number
+  append(data: Uint8Array): number
+  readFrom(offset: number): JournalRead
+}
+
+export type JournalImplementationName = 'segmented-ts' | 'reference-ts' | 'native-rust'
+
+export interface JournalSelection {
+  implementation: JournalImplementationName
+  create(maxBytes: number): ByteJournal
+  reason: string
+}
+
+/**
+ * Selects the journal implementation for a consumer.
+ *
+ * Default is the segmented TS journal: Phase 0 measured it fastest on the hot
+ * path (readFrom ~0.3–0.4 µs vs DSH ~252–303 µs and native ~0.8–0.9 µs) while
+ * the native pilot does not dominate any measured workload end-to-end. The
+ * native module remains available experimentally via @dsh-next/native.
+ */
+export function selectJournal(
+  options: {
+    native?: { available: boolean }
+    preferred?: JournalImplementationName
+  } = {},
+): JournalSelection {
+  if (options.preferred === 'reference-ts') {
+    return {
+      implementation: 'reference-ts',
+      create: (maxBytes) => new ReferenceByteJournal(maxBytes),
+      reason: 'explicitly requested reference strategy',
+    }
+  }
+  if (options.preferred === 'native-rust' && options.native?.available) {
+    return {
+      implementation: 'native-rust',
+      // Assigned lazily by @dsh-next/native (avoids a hard dependency here).
+      create: (maxBytes) => {
+        throw new Error('native-rust journal requires @dsh-next/native loadNative() factory wiring')
+      },
+      reason: 'experimental native selection',
+    }
+  }
+  return {
+    implementation: 'segmented-ts',
+    create: (maxBytes) => new SegmentedByteJournal(maxBytes),
+    reason:
+      'measured best on read-heavy hot path; native available=' +
+      String(options.native?.available ?? false) +
+      ' (experimental only)',
+  }
+}
+
 interface Segment {
   /** Stream offset of buffer[0]. */
   readonly start: number

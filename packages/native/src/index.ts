@@ -66,14 +66,22 @@ function resolveCandidate(
 /** Keyless diagnostics (CLI/log friendly). */
 export function diagnosticReport(extra?: Record<string, string>): string {
   const nat = loadNative()
+  // Journal selection is evidence-based (Phase 0): segmented TS dominates the
+  // measured hot path; native is available experimentally and never defaults.
+  const nativeLabel = nat.available ? 'available (experimental)' : 'unavailable'
   const lines = [
     'dsh-next',
     '',
     `native module: ${nat.available ? 'available' : 'unavailable'}`,
     ...(nat.reason ? [`  reason: ${nat.reason}`] : []),
-    `journal: ${nat.available ? 'native-capable (TS segmented default)' : 'typescript only'}`,
-    `persistence: stock`,
-    `subprocess: stock`,
+    'journal:',
+    `  segmented-ts: available`,
+    `  native-rust: ${nativeLabel}`,
+    `  selected: segmented-ts`,
+    `  nativeBenchmarkRecommended: false`,
+    `persistence: stock | worker (track B)`,
+    `resume: checkpoint cache — design stage`,
+    `supervisor: off`,
   ]
   for (const [k, v] of Object.entries(extra ?? {})) lines.push(`${k}: ${v}`)
   return lines.join('\n')
