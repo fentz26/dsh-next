@@ -16,6 +16,7 @@ const RUNNERS: Record<string, () => Promise<void>> = {
   'persistence-worker': async () => (await import('./persistence-worker.bench.ts')).persistenceWorkerBench(),
   'resume-stages': async () => (await import('./resume-stages.bench.ts')).resumeStagesBench(),
   'resume-worker': async () => (await import('./resume-worker.bench.ts')).resumeWorkerBench(),
+  'descriptor-scale': async () => (await import('./descriptor-scale.bench.ts')).descriptorScaleBench(),
   compression: async () => (await import('./compression.bench.ts')).compressionBench(),
   collector: async () => (await import('./output-collector.bench.ts')).collectorBench(),
   journal: async () => (await import('./journal.bench.ts')).journalBench(),

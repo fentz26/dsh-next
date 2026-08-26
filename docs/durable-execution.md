@@ -1,9 +1,25 @@
 # Durable execution architecture (Track F)
 
-Status gate: **FEASIBLE BY CONSTRUCTION, NOT YET VALIDATED** — this document
-fixes vocabulary, ownership tables, commit boundaries and crash semantics so a
-future prototype can be built and tested against them. No durable-execution
-code ships yet. It reuses DSH primitives only (Session log authority,
+Status gate: **DESCRIPTOR LAYER VALIDATED AT 10K SCALE; RUNTIME CYCLE NOT YET** —
+this document fixes vocabulary, ownership tables, commit boundaries and crash
+semantics. The storage half now exists as `@dsh-next/descriptor-store` with
+correctness tests and a measured scale benchmark; the wake/admit/commit runtime
+cycle is not implemented yet.
+
+## Measured prototype status
+
+* `packages/descriptor-store`: JSON-only records validated against the model
+  below (format version, mandatory source identity), WAL+FULL durability,
+  pull-based wake lookup by kind/key-prefix (no scheduler).
+* Correctness tests 4/4: round trip, invalid-descriptor refusal (incl. missing
+  source identity), scan respects sleeping/waking state, durability across
+  reopen.
+* Scale (`benches/results/descriptor-scale.txt`, darwin-arm64): 10k dormant
+  descriptors → RSS ~95 MiB total (~1 KB/descriptor incl. SQLite page
+  overhead); upsert p50 47 µs; get-by-id p99 2 µs; wake-scan p99 0.58 ms;
+  full sleep→wake→sleep cycle p50 74 µs / p99 148 µs.
+* Claim wording per program rules: "10k dormant descriptors tested" — not a
+  million-agent claim. It reuses DSH primitives only (Session log authority,
 `ctx.waits` orchestration, Jobs registry); dsh-next adds no second event bus
 and never persists live JS objects.
 

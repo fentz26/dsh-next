@@ -1,0 +1,12 @@
+{
+  "name": "@dsh-next/descriptor-store",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Durable logical-agent descriptor store prototype (Track F)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@dsh-next/journal": "workspace:*"
+  }
+}
