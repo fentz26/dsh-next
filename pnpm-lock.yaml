@@ -44,6 +44,8 @@ importers:
         specifier: workspace:*
         version: link:../journal
 
+  packages/paged-history: {}
+
   packages/persistence-worker:
     dependencies:
       '@dsh-next/journal':

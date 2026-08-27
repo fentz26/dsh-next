@@ -77,12 +77,14 @@ Evidence-gated tracks (gates in each doc; ADRs in [docs/adr.md](docs/adr.md)):
 |---|---|---|
 | A — Segmented journal | **JOURNAL READY** — `segmented-ts` default, native experimental | [journal.md](docs/journal.md) |
 | B — Worker persistence | **PROCEED** — main-loop lag ~1 ms vs 17–50 ms; differential suite green | [persistence-worker.md](docs/persistence-worker.md) |
-| C — Giant-session resume | **ARCHITECTURAL SEAM REQUIRED** — expansion dominates; designs ranked | [resume-acceleration.md](docs/resume-acceleration.md) |
+| C — Giant-session resume | Paged logical source VALIDATED (`readSuffix(4000)`: 5k objects/1.9 ms vs full-load 1.09 M objects/285 ms); Session lazy-preparation blocked by bridge contract | [paged-hydration.md](docs/paged-hydration.md) · [session-scale.md](docs/session-scale.md) |
+| D — Projections/checkpoints | design fixed (deriveMessages folds surface nodes only → checkpointable); awaits consumption seam | [checkpoints.md](docs/checkpoints.md) |
 | D — Projection caches | absorbed into Track C design (revision-keyed cache rules) | resume-acceleration.md |
 | E — Native primitives | narrowly scoped (journal pilot only); per-ADR-001 rules | adr.md |
 | F — Durable execution | state model/commit boundary/crash classes specified; no code yet | [durable-execution.md](docs/durable-execution.md) |
 | G — Supervisor | design note only (sidecar rationale) | [supervisor-design-note.md](docs/supervisor-design-note.md) |
 | H — Diagnostics/benchmarks | `pnpm diagnostics`, `pnpm bench [--json]` | benchmark-methodology.md |
 | I — Compat/distribution | version floor + degradation matrix documented | [compatibility.md](docs/compatibility.md) |
+| Continuation research | continue-as-new vocabulary/boundaries drafted (research only) | [session-continuation.md](docs/session-continuation.md) |
 
 Phase 0 history and baseline tables: [docs/baseline-results.md](docs/baseline-results.md).

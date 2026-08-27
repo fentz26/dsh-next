@@ -42,3 +42,23 @@ Format: problem → evidence → alternatives → decision → consequences → 
 * **Evidence**: blast-radius asymmetry (docs/supervisor-design-note.md); contract complexity table shows high regression surface.
 * **Decision**: deferred sidecar design; authenticated local IPC, opaque process ids, versioned framed protocol, PTY last.
 * **Revisit if**: Tracks A–C stabilize AND a validated use case demands survive-restart jobs.
+
+## ADR-006: Decode optimization alone is insufficient; paged source precedes snapshots
+
+* **Problem**: giant-session resume stalls allocate >1M JS objects; earlier phase split decode into 41/23/36% stages with no single hotspot.
+* **Evidence**: expansion-attribution bench (8-pass); consumer audit shows agent-ready state derives from surface nodes only — raw chunks unnecessary for continuation (core/session index.ts:729,704–750).
+* **Decision**: build backend-generic PagedLogicalSource (packages/paged-history) instead of snapshotting or faster decoders. Snapshot-only designs still materialize the whole events[] graph — the actual bottleneck.
+* **Consequences**: acceptance demo 5,002 objects vs 1,092,267 and 1.9 ms vs 285 ms for suffix reads on the 1M fixture; full materialization remains available explicitly.
+* **Revisit if**: upstream adopts/declines the seam proposal.
+
+## ADR-007: Consumer-audit gates migration order
+
+* **Evidence**: docs/session-scale.md classification table — identity-sensitive consumers (telemetry-otel seq check), seq-indexed increments (token meter), per-call FULL folds (plan-mode/title/schedule), query double-clones.
+* **Decision**: do not move consumers onto async paging without first-class sync guarantees they rely on today; Session Query flagged as first independent beneficiary; plan-mode folds are checkpoint candidates v2.
+* **Consequences**: safe incremental migration per tranche list; compatibility materializer stays for identity/exact-array users (#50/#52).
+
+## ADR-008: Checkpoints stay derived; conservative prefix invalidation v1
+
+* **Problem**: full-log revision changes every append ⇒ naive revision keys invalidate constantly.
+* **Decision**: generate at turn/end with invalidation-on-any-mutation policy initially; stronger prefix tokens (hashes/commit markers) deferred to upstream semantic review (docs/checkpoints.md).
+* **Revisit if**: measured wake costs at realistic cadences make stricter tokens necessary.
