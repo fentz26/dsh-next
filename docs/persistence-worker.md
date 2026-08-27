@@ -98,6 +98,13 @@ throughput; REGRESSION nowhere severe. Selected/bundled as `persistence =
 worker` for dsh-next profiles with automatic diagnostic + fallback to stock if
 worker init fails; `persistence = stock` remains a one-line config switch.
 
+## HMR / reload model (#99)
+
+One worker exists per backend instance; Cordis teardown awaits backend.close()
+which drains, closes SQLite and joins the thread before unload completes.
+Because provider instances are not shared across compositions, plugin reloads
+cannot produce duplicate workers or duplicate writers by construction.
+
 ## rusqlite gate
 
 NOT TRIGGERED: no significant problem remains after mitigation — IPC cost is

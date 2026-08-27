@@ -19,7 +19,12 @@ cycle is not implemented yet.
   overhead); upsert p50 47 µs; get-by-id p99 2 µs; wake-scan p99 0.58 ms;
   full sleep→wake→sleep cycle p50 74 µs / p99 148 µs.
 * Claim wording per program rules: "10k dormant descriptors tested" — not a
-  million-agent claim. It reuses DSH primitives only (Session log authority,
+  million-agent claim.
+* Known boundary: the prototype currently opens DatabaseSync on the caller's
+  thread like the stock store does; its measured worst op remains sub-ms at
+  10k scale. Before wiring into wake/admission flows that fire during bursty
+  appends, route the connection through the same worker pattern as Track B so
+  durability planes never share a thread with session I/O. It reuses DSH primitives only (Session log authority,
 `ctx.waits` orchestration, Jobs registry); dsh-next adds no second event bus
 and never persists live JS objects.
 

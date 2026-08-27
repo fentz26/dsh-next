@@ -41,6 +41,11 @@ false`). This honors the evidence rather than a "native = faster" assumption.
 * Reads are non-consuming; any number of independent readers may hold cursors.
 * `readFrom(offset)` with `offset < windowStart` returns the whole retained
   tail and sets `lossy` — the gap is unrecoverable by the journal itself.
+* Out-of-range offset policy (PINNED, all implementations incl. native):
+  offsets below the window start are lossy tail reads; future offsets
+  (`> nextOffset`) return empty data with `lossy=false`; a fresh journal is
+  always readable. (Upstream DSH leaves negatives effectively undefined via
+  subarray semantics; dsh-next defines them explicitly and tests it.)
 * Absolute whole-stream coordinates are stable across eviction.
 
 ## UTF-8 correctness policy

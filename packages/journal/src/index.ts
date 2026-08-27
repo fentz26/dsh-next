@@ -37,7 +37,8 @@ export interface ByteJournal {
   append(data: Uint8Array): number
   /**
    * Batched append for high-rate producers (mirrors native appendBatch):
-   * all-or-nothing ordering per call, single eviction pass afterwards.
+   * chunk order preserved exactly; identical observable state to sequential
+   * append calls (both implementations derive this by construction).
    */
   appendBatch?(chunks: readonly Uint8Array[]): number
   readFrom(offset: number): JournalRead

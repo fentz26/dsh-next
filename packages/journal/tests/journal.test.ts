@@ -119,6 +119,26 @@ check('independent readers do not consume', () => {
   }
 })
 
+check('out-of-range offset policy: negative -> windowStart+lossy, future -> empty', () => {
+  for (const J of IMPLS) {
+    const j: Journaled = new J(4096)
+    const s = randomBytes(1000)
+    j.append(s)
+    // Negative offsets land BELOW the window start by definition -> lossy tail.
+    const neg = j.readFrom(-5)
+    if (neg.lossy !== true) throw new Error('negative must be lossy')
+    assertSameReads(neg.data, s)
+    // Future offsets are legal no-ops (non-consuming EOF-ahead).
+    const fut = j.readFrom(5000)
+    if (fut.lossy !== false) throw new Error('future offset not lossy')
+    if (fut.data.byteLength !== 0) throw new Error('future offset must be empty')
+    // Zero-length journal always readable.
+    const e = new J(1024)
+    const er = e.readFrom(0)
+    if (er.data.byteLength !== 0 || er.nextOffset !== 0) throw new Error('empty journal')
+  }
+})
+
 check('randomized differential: segmented == reference', () => {
   let seed = 0x2545f491
   const rand = () => {
