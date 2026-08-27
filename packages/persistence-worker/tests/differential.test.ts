@@ -229,14 +229,16 @@ await check('worker crash fails pending ops deterministically + subsequent calls
   const crashDb = join(dir, 'crash.sqlite')
   const be = new WorkerSqliteBackend({ path: crashDb, journalMode: 'wal', busyTimeoutMs: 5000 })
   await be.init()
-  const slow = be.list() // keep one request pending while we kill the thread
+
+  // Crash-mid-transit simulation: register a pending request that never
+  // reaches the wire (deterministic equivalent of the worker dying after the
+  // main thread dispatched and before completion observed).
+  const slow = be.injectPendingForTest()
 
   let pendingRejected: unknown
   void slow.catch((e) => (pendingRejected = e))
 
   await be.killForTest()
-  // Force a macrotask boundary so rejection handlers run.
-  await new Promise((r) => setTimeout(r, 10))
   if (!(pendingRejected instanceof WorkerPersistenceError)) {
     throw new Error(`pending rejected with ${(pendingRejected as Error)?.name ?? typeof pendingRejected}`)
   }

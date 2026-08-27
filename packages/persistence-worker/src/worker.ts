@@ -15,6 +15,7 @@
  * execution anyway; FIFO preserves coordinator ordering across sessions.
  */
 import { parentPort, workerData } from 'node:worker_threads'
+
 import { PROTOCOL_VERSION, type WorkerRequest, type WorkerResponse } from './protocol.ts'
 
 interface DshStore {
@@ -25,6 +26,7 @@ interface DshStore {
   readStoredRevision(id: string): Promise<unknown>
   commitRepair(meta: unknown, tornMarker: unknown, closers: readonly unknown[]): Promise<void>
   list(): Promise<unknown>
+  listSnapshots(): Promise<unknown>
   close(): Promise<void>
 }
 
@@ -93,7 +95,14 @@ async function dispatch(store: DshStore | undefined, req: WorkerRequest): Promis
     }
     case 'appendBatch': {
       const s = requireStore(store)
-      const [meta, events, isMaterialized] = req.payload
+      const [meta, rawEvents, isMaterialized, encoded] = req.payload as unknown as [
+        unknown,
+        unknown,
+        boolean,
+        number,
+      ]
+      const events =
+        encoded === 1 ? (JSON.parse(rawEvents as string) as unknown[]) : (rawEvents as unknown[])
       await s.appendBatch(meta as never, events as never, isMaterialized)
       return { result: undefined, store }
     }
@@ -131,6 +140,8 @@ async function dispatch(store: DshStore | undefined, req: WorkerRequest): Promis
     }
     case 'list':
       return { result: await requireStore(store).list(), store }
+    case 'listSnapshots':
+      return { result: await requireStore(store).listSnapshots(), store }
     case 'close': {
       if (store !== undefined) await store.close()
       return { result: undefined, store: undefined }

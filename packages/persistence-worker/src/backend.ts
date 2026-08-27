@@ -36,6 +36,12 @@ export interface WorkerBackendOptions {
   /** Module exporting DSH's SqliteStore (.ts under tsx; compiled .js when packaged). */
   readonly storeModulePath?: string
   readonly maxInFlight?: number
+  /**
+   * Append-path wire encoding. Measured (benches/results/ipc-transport.txt):
+   * a single JSON string crosses ~2x faster than structured-cloning nested
+   * event graphs (worker re-parses natively). Default: stringified.
+   */
+  readonly appendTransport?: 'stringified' | 'structured'
 }
 
 export interface BackendStats {
@@ -52,6 +58,9 @@ export interface PagedLoaded {
   events: unknown[]
 }
 
+/** Payload marker distinguishing the string-encoded event transport. */
+const ENCODED_EVENTS = 1
+
 /** Safety valve so a malformed/unflagged stream can never hang the caller. */
 const MAX_PAGES_SAFETY = 1_000_000
 
@@ -65,10 +74,12 @@ export class WorkerSqliteBackend {
   private readonly maxInFlight: number
   private waitQueue: Array<() => void> = []
   private stats_: BackendStats = { workerCpuUserMs: 0, workerCpuSystemMs: 0, requestsDispatched: 0, failed: false }
+  private readonly appendTransport: NonNullable<WorkerBackendOptions['appendTransport']>
   readonly name = 'session-persistence-sqlite-worker'
 
   constructor(private readonly options: WorkerBackendOptions) {
     this.maxInFlight = options.maxInFlight ?? 64
+    this.appendTransport = options.appendTransport ?? 'stringified'
   }
 
   async init(): Promise<void> {
@@ -82,10 +93,15 @@ export class WorkerSqliteBackend {
         DSH_NEXT_STORE_MODULE: pathToFileURL(storeModulePath).href,
       },
     })
-    // Route framed responses to their per-request listeners.
-    this.worker.on('message', ({ res }: { res: WorkerResponse }) => {
-      this.worker.emit(`res:${res.seq}`, res)
-    })
+    // Route framed responses to their per-request listeners. Bound to the
+    // local instance so late frames during/after termination can never
+    // dereference a cleared handle.
+    {
+      const w = this.worker
+      w.on('message', ({ res }: { res: WorkerResponse }) => {
+        w.emit(`res:${res.seq}`, res)
+      })
+    }
     const ready = new Promise<void>((resolve) => {
       // Failures during init propagate through the pending slot below.
       resolve(undefined)
@@ -104,8 +120,15 @@ export class WorkerSqliteBackend {
       await this.terminateNow(500)
       throw err
     }
-    this.worker.on('error', (err) => this.markFailed(err))
-    this.worker.on('exit', () => this.markFailed(new Error('worker exited unexpectedly')))
+    {
+      const w = this.worker
+      w.on('error', (err) => {
+        if (!this.disposed) this.markFailed(err)
+      })
+      w.on('exit', () => {
+        if (!this.disposed) this.markFailed(new Error('worker exited unexpectedly'))
+      })
+    }
   }
 
   // ---- PersistenceBackend hook surface ----
@@ -123,7 +146,14 @@ export class WorkerSqliteBackend {
   }
 
   appendBatch(meta: unknown, events: readonly unknown[], isMaterialized: boolean): Promise<void> {
-    return this.call('appendBatch', [meta, events, isMaterialized]) as Promise<void>
+    // Coordinator events arrive as lossless-JSON snapshots (it guarantees that
+    // itself), so a single stringify crosses cheaper than cloning and parses
+    // back to equivalent plain objects inside the worker.
+    const payload =
+      this.appendTransport === 'stringified'
+        ? [meta, JSON.stringify(events), isMaterialized, ENCODED_EVENTS]
+        : [meta, events, isMaterialized, 0]
+    return this.call('appendBatch', payload) as Promise<void>
   }
 
   commitRepair(meta: unknown, tornMarker: unknown, closers: readonly unknown[]): Promise<void> {
@@ -132,6 +162,10 @@ export class WorkerSqliteBackend {
 
   list(signal?: AbortSignal): Promise<unknown> {
     return this.call('list', undefined, signal)
+  }
+
+  listSnapshots(signal?: AbortSignal): Promise<unknown> {
+    return this.call('listSnapshots', undefined, signal)
   }
 
   stats(): BackendStats {
@@ -164,10 +198,26 @@ export class WorkerSqliteBackend {
     return this.close()
   }
 
-  /** Test/fault-injection hook: hard-kills the worker thread immediately. */
+  /**
+   * Fault injection: registers a request-shaped pending entry that never
+   * reaches the wire — the exact state a caller would hold during a crash
+   * mid-dispatch. Combined with killForTest this makes "pending operations
+   * reject deterministically" assertable without timing races.
+   */
+  injectPendingForTest(): Promise<never> {
+    const seq = ++this.seq
+    return new Promise<never>((_resolve, reject) => {
+      this.pending.set(seq, { reject })
+    })
+  }
+
+  /** Test/fault-injection hook: hard-kills the worker thread immediately.
+   * Failure observation is synchronous and idempotent — callers need not race
+   * asynchronous worker-exit events to see pending rejections. */
   async killForTest(): Promise<void> {
     if (!this.worker) throw new Error('worker not initialized')
     await this.terminateNow(0)
+    this.markFailed(new Error('persistence worker terminated by killForTest'))
   }
 
   /**

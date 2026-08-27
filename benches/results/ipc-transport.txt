@@ -1,0 +1,2 @@
+ipc-append n=300xB200events | structured_clone total=66.6ms | json_string roundtrip(excl.main stringify) total=31.2ms | json_string incl.stringify total=31.2ms | payloadKB≈33
+ipc-return n=50x2000eventgraphs | single_clone total=103.7ms | paged_250 total=76.0ms | cpu_total=212ms

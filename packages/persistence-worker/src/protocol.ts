@@ -18,6 +18,7 @@ export type WorkerRequest =
   | { seq: number; op: 'loadStoredFrom'; payload: [id: string, fromSeq: number] }
   | { seq: number; op: 'readStoredRevision'; payload: string }
   | { seq: number; op: 'commitRepair'; payload: [meta: unknown, tornMarker: unknown, closers: unknown[]] }
+  | { seq: number; op: 'listSnapshots'; payload: undefined }
   | { seq: number; op: 'list'; payload: undefined }
   | { seq: number; op: 'close'; payload: undefined }
 
