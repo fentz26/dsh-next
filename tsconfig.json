@@ -1,5 +1,3 @@
-// TEMP NOTES: 'exclude' below contains packages/checkpoints pending a parallel
-// workstream finishing its typecheck; drop those entries once it lands.
 {
   "compilerOptions": {
     "target": "ES2022",
@@ -20,9 +18,5 @@
     "benches/src/**/*.ts",
     "crates/native-journal/__test__/**/*.ts",
     "crates/native-journal/__test__/**/*.ts"
-  ],
-  "exclude": [
-    "packages/checkpoints/src/**/*.ts",
-    "packages/checkpoints/tests/**/*.ts"
   ]
 }
