@@ -3,17 +3,12 @@
 # trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
 
 ## resume-modes
-Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/private/tmp/dsh-lazy-seam/packages/core/session/node_modules/@deepseek-ai/cordis/lib/index.js' imported from /private/tmp/dsh-lazy-seam/packages/core/session/src/index.ts
-    at finalizeResolution (node:internal/modules/esm/resolve:275:11)
-    at moduleResolve (node:internal/modules/esm/resolve:861:10)
-    at defaultResolve (node:internal/modules/esm/resolve:985:11)
-    at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
-    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:783:38)
-    at nextStep (node:internal/modules/customization_hooks:189:26)
-    at resolveBaseSync (file:///Users/ducnguyen/Documents/dsh-next/node_modules/.pnpm/tsx@4.23.12/node_modules/tsx/dist/register-C4vWVmug.mjs:2:10932)
-    at resolveDirectorySync (file:///Users/ducnguyen/Documents/dsh-next/node_modules/.pnpm/tsx@4.23.12/node_modules/tsx/dist/register-C4vWVmug.mjs:2:12238)
-    at resolveTsPathsSync (file:///Users/ducnguyen/Documents/dsh-next/node_modules/.pnpm/tsx@4.23.12/node_modules/tsx/dist/register-C4vWVmug.mjs:2:13445)
-    at resolve (file:///Users/ducnguyen/Documents/dsh-next/node_modules/.pnpm/tsx@4.23.12/node_modules/tsx/dist/register-C4vWVmug.mjs:2:15991) {
-  code: 'ERR_MODULE_NOT_FOUND',
-  url: 'file:///private/tmp/dsh-lazy-seam/packages/core/session/node_modules/@deepseek-ai/cordis/lib/index.js'
-}
+# building fixture (~1,000,000 logical events, sparse messages)…
+resume-legacy-full-restore | events_materialized=1,000,001 | wall_to_agent_ready=522.57ms | cpu_main=1,130.87ms | rssDelta=+205.1MiB | 
+resume-checkpoint-suffix | events_materialized=4,117 | wall_to_agent_ready=24.67ms | cpu_main=41.48ms | rssDelta=+2.4MiB | logical_events_in_log=1,000,000 payloadKB=299.2 physicalRowsTouched=117
+TypeError: Cannot read properties of undefined (reading 'type')
+    at deriveEventMessage (/private/tmp/dsh-lazy-seam/packages/core/session/src/surface.ts:87:17)
+    at Session.deriveEventMessage (/private/tmp/dsh-lazy-seam/packages/core/session/src/index.ts:845:12)
+    at Session.deriveMessages (/private/tmp/dsh-lazy-seam/packages/core/session/src/index.ts:828:24)
+    at Module.resumeModesBench (/Users/ducnguyen/Documents/dsh-next/benches/src/resume-modes.bench.ts:222:17)
+    at async main (/Users/ducnguyen/Documents/dsh-next/benches/src/main.ts:63:5)
