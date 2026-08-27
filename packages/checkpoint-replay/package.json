@@ -1,0 +1,9 @@
+{
+  "name": "@dsh-next/checkpoint-replay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Derived checkpoint: chunk-filtered canonical prefix rebuilt through real Session machinery (Track C tranche E)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts"
+}

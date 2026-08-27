@@ -15,7 +15,7 @@
     "bench:compression": "tsx benches/src/main.ts compression",
     "bench:collector": "tsx benches/src/main.ts output-collector",
     "bench:journal": "tsx benches/src/main.ts journal",
-    "test": "tsx packages/journal/tests/journal.test.ts && tsx crates/native-journal/__test__/differential.test.ts && tsx packages/persistence-worker/tests/differential.test.ts && tsx packages/descriptor-store/tests/store.test.ts && tsx packages/persistence-worker/tests/restart.test.ts && tsx packages/paged-history/tests/paged-source.test.ts",
+    "test": "tsx packages/journal/tests/journal.test.ts && tsx crates/native-journal/__test__/differential.test.ts && tsx packages/persistence-worker/tests/differential.test.ts && tsx packages/descriptor-store/tests/store.test.ts && tsx packages/persistence-worker/tests/restart.test.ts && tsx packages/paged-history/tests/paged-source.test.ts && tsx packages/checkpoint-replay/tests/equivalence.test.ts",
     "diagnostics": "tsx -e \"import { diagnosticReport } from './packages/native/src/index.ts'; console.log(diagnosticReport())\"",
     "build:native": "cd crates/native-journal && cargo build --release && cp target/release/libdsh_next_native_journal.dylib pilot.node"
   },

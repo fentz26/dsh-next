@@ -32,8 +32,30 @@ export interface LogicalPage {
   readonly events: readonly Readonly<Record<string, unknown>>[]
   /** First seq NOT included due to end-of-log (undefined = more remain). */
   readonly endOfLogAt?: number
+  /** Logical events emitted past the predecessor-skip window. */
   readonly inspectedCount: number
+  /** Logical events inside touched physical rows, INCLUDING skipped predecessors. */
+  readonly decodedLogicalCount: number
   readonly approxPayloadBytes: number
+  /** Payload bytes of decoded logical events including skipped predecessors. */
+  readonly decodedPayloadBytes: number
+  /** Compressed data-column bytes read from SQLite for this page. */
+  readonly compressedBytesRead: number
+  /** Physical rows fetched and decoded (or skipped) for this page. */
+  readonly physicalRowsTouched: number
+}
+
+function emptyPage(endOfLogAt?: number): LogicalPage {
+  return {
+    events: [],
+    inspectedCount: 0,
+    decodedLogicalCount: 0,
+    approxPayloadBytes: 0,
+    decodedPayloadBytes: 0,
+    compressedBytesRead: 0,
+    physicalRowsTouched: 0,
+    ...(endOfLogAt !== undefined ? { endOfLogAt } : {}),
+  }
 }
 
 export interface SessionSourceMeta {
@@ -41,11 +63,26 @@ export interface SessionSourceMeta {
   readonly length: number
 }
 
+export interface CheckpointReadOptions {
+  /** Logical event types to EXCLUDE at the storage layer (never fetched/decoded). */
+  excludeTypes?: readonly string[]
+  /** Exclusive upper bound. */
+  upToSeq: number
+  maxBytes?: number
+  signal?: AbortSignal
+}
+
 export interface PagedLogicalSource {
   readonly kind: string
   meta(id: string): Promise<SessionSourceMeta | undefined>
   readRange(id: string, startSeq: number, options?: ReadRangeOptions): Promise<LogicalPage>
   readSuffix(id: string, lastN: number, options?: Omit<ReadRangeOptions, 'limit'>): Promise<LogicalPage>
+  /**
+   * Structural-win path (#126): excluded event types never enter the SQL
+   * result — their packed physical frames are not fetched or decompressed.
+   * Used by derived-checkpoint generation/deserialization.
+   */
+  readPrefixFiltered(id: string, options: CheckpointReadOptions): Promise<LogicalPage>
   close(): Promise<void>
 }
 
@@ -111,28 +148,33 @@ export async function openSqliteSource(path: string): Promise<PagedLogicalSource
 
     const total = lengthOf(id)
     if (startSeq >= total) {
-      return { events: [], endOfLogAt: total, inspectedCount: 0, approxPayloadBytes: 0 }
+      return emptyPage(total)
     }
 
     // Overlapping packed predecessors can cover up to FLOOR logical events
     // below startSeq; decode-and-skip precisely by logical seq afterwards.
     const floor = Math.max(0, startSeq - (MAX_PACKED_ROW_MEMBERS - 1))
-    const rawRows = db
-      .prepare(
-        'SELECT seq, time, type, data, ignorable, surface_op, source_event_seqs FROM events WHERE session_id=? AND seq>=? ORDER BY seq',
-      )
-      .all(id, floor) as unknown as Array<Record<string, unknown>>
+    const rowStatement = db.prepare(
+      'SELECT seq, time, type, data, ignorable, surface_op, source_event_seqs FROM events WHERE session_id=? AND seq>=? ORDER BY seq',
+    )
+    const rawRows = rowStatement.iterate(id, floor) as IterableIterator<Record<string, unknown>>
 
     const mutableEvents: Record<string, unknown>[] = []
     let inspected = 0
+    let decodedLogical = 0
     let bytes = 0
+    let decodedBytes = 0
+    let compressedBytes = 0
+    let rowsTouched = 0
     let expected = startSeq
     let sawTailRow = false
 
-    for (let ri = 0; ri < rawRows.length; ri++) {
+    for (const row of rawRows) {
       if (options?.signal?.aborted) throw options.signal.reason ?? new Error('aborted')
-      const row = rawRows[ri]!
-      const isTail = ri === rawRows.length - 1
+      rowsTouched++
+      const dataLen =
+        typeof row.data === 'string' ? Buffer.byteLength(row.data) : (row.data as Buffer | null)?.length ?? 0
+      compressedBytes += dataLen
 
       let expanded: Array<{ seq: number }> = []
       try {
@@ -142,8 +184,15 @@ export async function openSqliteSource(path: string): Promise<PagedLogicalSource
       }
 
       for (const ev of expanded) {
+        decodedLogical++
+        const payload = approxPayload(ev as Record<string, unknown>)
+        decodedBytes += payload
         inspected++
-        if (ev.seq < startSeq) continue // predecessor coverage below window
+        if ((ev.seq as number) < startSeq) {
+          inspected--
+          continue // predecessor coverage below window
+        }
+        const event = ev as Readonly<Record<string, unknown>>
 
         if (
           mutableEvents.length > 0 &&
@@ -151,35 +200,126 @@ export async function openSqliteSource(path: string): Promise<PagedLogicalSource
         ) {
           // Page filled with more remaining → NOT end-of-log.
           const events = Object.freeze(mutableEvents)
-          return { events, inspectedCount: inspected, approxPayloadBytes: bytes }
+          return {
+            events,
+            inspectedCount: inspected,
+            decodedLogicalCount: decodedLogical,
+            approxPayloadBytes: bytes,
+            decodedPayloadBytes: decodedBytes,
+            compressedBytesRead: compressedBytes,
+            physicalRowsTouched: rowsTouched,
+          }
         }
 
-        if (ev.seq !== expected) {
+        if ((ev.seq as number) !== expected) {
           // First emitted event beyond requested start without continuity
           // means a gap/corruption in the log — refuse loudly.
           throw new Error(
-            mutableEvents.length === 0 && ev.seq > startSeq
+            mutableEvents.length === 0 && (ev.seq as number) > startSeq
               ? `paged-history: gap before seq=${ev.seq}`
               : `paged-history: non-contiguous sequence at seq=${ev.seq}, expected ${expected}`,
           )
         }
-        expected = ev.seq + 1
+        expected = (ev.seq as number) + 1
 
-        mutableEvents.push(Object.freeze(ev as Readonly<Record<string, unknown>>))
-        bytes += approxPayload(ev)
+        mutableEvents.push(Object.freeze(event))
+        bytes += payload
       }
-      sawTailRow ||= isTail
     }
 
+    void sawTailRow
     const cursorNow = expected
     const endOfLogAt =
-      cursorNow >= total && sawTailRow ? total : undefined
+      cursorNow >= total ? total : undefined
     const events = Object.freeze(mutableEvents)
     return {
       events,
       inspectedCount: inspected,
+      decodedLogicalCount: decodedLogical,
       approxPayloadBytes: bytes,
+      decodedPayloadBytes: decodedBytes,
+      compressedBytesRead: compressedBytes,
+      physicalRowsTouched: rowsTouched,
       ...(endOfLogAt !== undefined ? { endOfLogAt } : {}),
+    }
+  }
+
+  async function readPrefixFiltered(
+    id: string,
+    options: CheckpointReadOptions,
+  ): Promise<LogicalPage> {
+    requireOpen()
+    const excludes = new Set(options.excludeTypes ?? [])
+    if (!Number.isSafeInteger(options.upToSeq) || options.upToSeq < 0) {
+      throw new RangeError('upToSeq must be a non-negative integer')
+    }
+    const maxBytes = options.maxBytes ?? Number.POSITIVE_INFINITY
+
+    // Fully exclude dropped types AT SQL level: their physical frames are
+    // never fetched nor decompressed ("don't even read it", governing rule).
+    // NOTE: codec.ts packs eligible deltas under physical TAGS (text-chunks /
+    // reasoning-chunks / tool-call-chunks); by construction a packed frame's
+    // expansion contains ONLY its originating logical event kind, so excluding
+    // a logical type must also exclude its packed tags.
+    const PACKED_TAGS_BY_LOGICAL: Record<string, readonly string[]> = {
+      'assistant/chunk': ['text-chunks', 'reasoning-chunks', 'tool-call-chunks'],
+    }
+    const sqlExcluded = new Set<string>(excludes)
+    for (const t of excludes) {
+      for (const tag of PACKED_TAGS_BY_LOGICAL[t] ?? []) sqlExcluded.add(tag)
+    }
+    void PACKED_TAGS_BY_LOGICAL
+
+    const conds: string[] = ['session_id=?', 'seq<?']
+    const params: Array<string | number> = [id, options.upToSeq]
+    for (const t of sqlExcluded) {
+      conds.push('type<>?')
+      params.push(t)
+    }
+    const sql = `SELECT seq, time, type, data, ignorable, surface_op, source_event_seqs FROM events WHERE ${conds.join(' AND ')} ORDER BY seq`
+    const rows = db.prepare(sql).all(...(params as never[])) as unknown as Array<
+      Record<string, unknown>
+    >
+
+    const mutableEvents: Record<string, unknown>[] = []
+    let inspected = 0
+    let bytes = 0
+    let expected = -1
+    let gapDetected = false
+
+    for (const row of rows) {
+      if (options.signal?.aborted) throw options.signal.reason ?? new Error('aborted')
+      let evs: Array<{ seq: number }> = []
+      try {
+        evs = compression.decodeRow(row)
+      } catch (err) {
+        throw new Error(`paged-history: malformed physical row at seq=${Number(row.seq)}`, { cause: err })
+      }
+      for (const ev of evs) {
+        inspected++
+        if (expected === -1) expected = ev.seq
+        if (ev.seq !== expected && !gapDetected) {
+          // Gaps belong to EXCLUDED types' runs — expected and harmless here;
+          // dense rebasing happens in the checkpoint layer above us.
+          gapDetected = true
+        }
+        expected = ev.seq + 1
+        if (bytes >= maxBytes && mutableEvents.length > 0) break
+        mutableEvents.push(Object.freeze(ev as Readonly<Record<string, unknown>>))
+        bytes += approxPayload(ev)
+      }
+      if (options.maxBytes !== undefined && bytes >= options.maxBytes && mutableEvents.length > 0) break
+    }
+
+    return {
+      events: Object.freeze(mutableEvents),
+      inspectedCount: inspected,
+      approxPayloadBytes: bytes,
+      endOfLogAt: undefined,
+      decodedLogicalCount: inspected,
+      decodedPayloadBytes: bytes,
+      compressedBytesRead: bytes,
+      physicalRowsTouched: rows.length,
     }
   }
 
@@ -202,7 +342,7 @@ export async function openSqliteSource(path: string): Promise<PagedLogicalSource
   }
 
   void requireOpen
-  return { kind: 'sqlite-v17-paged', meta, readRange, readSuffix, close }
+  return { kind: 'sqlite-v17-paged', meta, readRange, readSuffix, readPrefixFiltered, close }
 }
 
 function approxPayload(ev: Record<string, unknown>): number {

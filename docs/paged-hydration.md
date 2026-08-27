@@ -62,6 +62,19 @@ Semantics locked by 8 differential tests against canonical loads:
 Architecture result: *not reading 996k events* beats every decode optimization
 by two to three orders of magnitude on the axes that matter.
 
+## Resume-mode measurements (milestone task #5)
+
+| mode | objects materialized | wall→agent-ready | main CPU | RSS Δ |
+|---|---:|---:|---:|---:|
+| legacy fromRestore(all) | 1,000,001 | 524.7 ms (stall) | 1112 ms | +199.7 MiB |
+| checkpoint-prefix(excl chunks)+suffix | **4,117** | **22.9 ms** | 38 ms | +1.7 MiB |
+| hot cache (pre-deserialized) | 4,117 | **14.2 ms** | 19 ms | +1.5 MiB |
+
+Storage-plane lesson encoded in code: packed rows carry TAG types
+(text-chunks/…), so storage-level type exclusion must map logical types to their
+packed tags — otherwise 'don't even read it' silently degrades into reading
+everything.
+
 ## Migration tranches (spec #114/#115/#87)
 
 1. ✅ logical range-read source (this prototype)

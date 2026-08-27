@@ -30,6 +30,10 @@ importers:
         specifier: ^2
         version: 2.18.4
 
+  packages/checkpoint-replay: {}
+
+  packages/checkpoints: {}
+
   packages/descriptor-store:
     dependencies:
       '@dsh-next/journal':

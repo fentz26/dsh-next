@@ -136,3 +136,14 @@ requires consumer-side hydration semantics outside dsh-next's control.
 measured stakes (>100× time reduction potential for agent-ready resume, GBs
 saved at larger scales). Hence: **ARCHITECTURAL SEAM REQUIRED**, with
 worker-reconstruction (design 1) delivered meanwhile.
+
+
+## Update — checkpoint tranche validated (post-seam-design work)
+
+Checkpointed resume now has working out-of-tree proof using REAL core machinery:
+chunk-excluded canonical prefix (dense rebased) restored via fromRestore plus
+live-appended suffix reproduces model-visible state identically across multiple
+boundaries (packages/checkpoint-replay). Numbers above in paged-hydration.md;
+verdict recorded there. Remaining blocker unchanged: wiring through
+coordinator.prepareCore/ctx.sessions.prepare requires the upstream window/lazy
+seed seam — until then ordinary cold resume keeps the eager path.
