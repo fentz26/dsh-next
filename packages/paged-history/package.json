@@ -1,0 +1,9 @@
+{
+  "name": "@dsh-next/paged-history",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paged logical Session history source prototype (Track C tranche C)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts"
+}

@@ -18,6 +18,7 @@ const RUNNERS: Record<string, () => Promise<void>> = {
   'resume-worker': async () => (await import('./resume-worker.bench.ts')).resumeWorkerBench(),
   'descriptor-scale': async () => (await import('./descriptor-scale.bench.ts')).descriptorScaleBench(),
   'expansion-attribution': async () => (await import('./expansion-attribution.bench.ts')).expansionAttributionBench(),
+  'paged-acceptance': async () => (await import('./paged-acceptance.bench.ts')).pagedAcceptanceBench(),
   compression: async () => (await import('./compression.bench.ts')).compressionBench(),
   collector: async () => (await import('./output-collector.bench.ts')).collectorBench(),
   journal: async () => (await import('./journal.bench.ts')).journalBench(),

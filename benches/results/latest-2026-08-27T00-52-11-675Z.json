@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "machine": "cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness",
+    "trials": 3
+  },
+  "records": [
+    {
+      "benchmark": "paged-acceptance",
+      "timestamp": "2026-08-27T00:52:11.664Z",
+      "raw": "acceptance-baseline(full-load) | events_materialized=1,092,267 | wall=284.92ms | cpu=689.83ms | rssDelta=+148.7MiB",
+      "message": "acceptance-baseline(full-load)",
+      "events_materialized": "1,092,267",
+      "wall": "284.92ms",
+      "cpu": "689.83ms",
+      "rssDelta": "+148.7MiB"
+    },
+    {
+      "benchmark": "paged-acceptance",
+      "timestamp": "2026-08-27T00:52:11.664Z",
+      "raw": "acceptance-paged(suffix-4000) | logical_events_in_log=1,092,001 | objects_allocated=5,002 | wall=1.87ms | cpu=2.08ms | rssDelta=+0.4MiB | payloadKB=315.1",
+      "message": "acceptance-paged(suffix-4000)",
+      "logical_events_in_log": "1,092,001",
+      "objects_allocated": "5,002",
+      "wall": "1.87ms",
+      "cpu": "2.08ms",
+      "rssDelta": "+0.4MiB",
+      "payloadKB": 315.1
+    }
+  ]
+}
