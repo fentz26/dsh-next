@@ -37,13 +37,22 @@ DeepSeek Harness TypeScript control plane   ← unchanged
 
 ```text
 docs/
-  architecture.md             audit + boundary design (Phase 0)
-  benchmark-methodology.md    how benchmarks are built and run
-  baseline-results.md         Phase 0 measurement tables + analysis
-  journal-pilot.md            native journal pilot: API, tests, verdicts
+  architecture.md                 audit + boundary design (Phase 0)
+  benchmark-methodology.md        how benchmarks are built and run
+  baseline-results.md             Phase 0 measurement tables + analysis
+  journal-pilot.md                native journal pilot: API, tests, verdicts
   persistence-provider-design.md  future ctx.sessionPersistence provider notes
-  supervisor-design-note.md   persistent process supervisor feasibility (design only)
+  supervisor-design-note.md       persistent process supervisor feasibility (design only)
+  session-scale.md                whole-history consumer audit at 1M-event scale
+  paged-hydration.md              paged logical hydration design + acceptance proof
+  checkpoints.md                  derived-checkpoint safety rules (design/protocol)
+  resume-acceleration.md          measured resume breakdown + seam gate
+  upstream-seam-proposal.md       maintainer-facing proposal for the lazy seam
 packages/journal/             BoundedByteJournal: TS reference + optimized candidate
+packages/paged-history/       PagedLogicalSource over SQLite v17 (+ export consumer)
+packages/checkpoint-replay/   chunk-filtered derived checkpoints, REAL-Session equivalence tests
+packages/persistence-worker/  worker-owned persistence provider
+packages/descriptor-store/    durable descriptor storage prototype
 crates/native-journal/        Rust napi-rs pilot (NativeByteJournal)
 benches/                      reproducible benchmark harness (run against real DSH)
 ```
@@ -62,6 +71,15 @@ DSH_ROOT=~/deepseek-harness pnpm bench:journal      # journal strategies + FFI b
 pnpm test                                           # TS + native differential tests
 ```
 
+`pnpm test` runs the public gate without a DSH checkout; suites that compare
+against live DSH internals skip cleanly unless `DSH_ROOT` is set. Extra
+milestone benchmarks are runnable by name:
+
+```bash
+DSH_ROOT=~/deepseek-harness npx tsx benches/src/main.ts resume-modes      # checkpoint vs legacy resume TTR
+DSH_ROOT=~/deepseek-harness npx tsx benches/src/main.ts paged-acceptance  # 4k page vs 1.09M-event full load
+```
+
 The native module is built separately today (Phase 0 pilot):
 
 ```bash
@@ -77,9 +95,8 @@ Evidence-gated tracks (gates in each doc; ADRs in [docs/adr.md](docs/adr.md)):
 |---|---|---|
 | A — Segmented journal | **JOURNAL READY** — `segmented-ts` default, native experimental | [journal.md](docs/journal.md) |
 | B — Worker persistence | **PROCEED** — main-loop lag ~1 ms vs 17–50 ms; differential suite green | [persistence-worker.md](docs/persistence-worker.md) |
-| C — Giant-session resume | Paged logical source VALIDATED (`readSuffix(4000)`: 5k objects/1.9 ms vs full-load 1.09 M objects/285 ms); Session lazy-preparation blocked by bridge contract | [paged-hydration.md](docs/paged-hydration.md) · [session-scale.md](docs/session-scale.md) |
-| D — Projections/checkpoints | design fixed (deriveMessages folds surface nodes only → checkpointable); awaits consumption seam | [checkpoints.md](docs/checkpoints.md) |
-| D — Projection caches | absorbed into Track C design (revision-keyed cache rules) | resume-acceleration.md |
+| C — Giant-session resume | **PAGED HYDRATION VALIDATED + CONSUMER MIGRATED** — 4k page: ~5k objects / few ms vs full-load 1.09 M objects; export consumer streams byte-identical artifacts through ranges | [paged-hydration.md](docs/paged-hydration.md) · [session-scale.md](docs/session-scale.md) |
+| D — Checkpointed resume | **CHECKPOINTED RESUME VALIDATED** — chunk-filtered `distill()` prefix, equivalence-tested against REAL Session machinery (messages + requestHeader identical); resume TTR **28 ms vs 581 ms legacy**, hot path 15 ms. Lazy Session preparation still gated by upstream bridge contract | [checkpoints.md](docs/checkpoints.md) · [resume-acceleration.md](docs/resume-acceleration.md) |
 | E — Native primitives | narrowly scoped (journal pilot only); per-ADR-001 rules | adr.md |
 | F — Durable execution | state model/commit boundary/crash classes specified; no code yet | [durable-execution.md](docs/durable-execution.md) |
 | G — Supervisor | design note only (sidecar rationale) | [supervisor-design-note.md](docs/supervisor-design-note.md) |
@@ -88,3 +105,8 @@ Evidence-gated tracks (gates in each doc; ADRs in [docs/adr.md](docs/adr.md)):
 | Continuation research | continue-as-new vocabulary/boundaries drafted (research only) | [session-continuation.md](docs/session-continuation.md) |
 
 Phase 0 history and baseline tables: [docs/baseline-results.md](docs/baseline-results.md).
+
+## License & contact
+
+MIT — see [LICENSE](LICENSE). Security disclosure process in
+[SECURITY.md](SECURITY.md). Contact: [contact@fentz.dev](mailto:contact@fentz.dev).
