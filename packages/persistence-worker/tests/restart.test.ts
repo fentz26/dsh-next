@@ -9,6 +9,12 @@ async function check(name: string, fn: () => Promise<void>): Promise<void> {
   catch (e) { failed++; console.error(`FAIL - ${name}`); console.error(e) }
 }
 
+// Skip cleanly outside dev/bench environments (no DSH checkout available).
+if (process.env.DSH_ROOT === undefined) {
+  console.log('SKIP: set DSH_ROOT to a DeepSeek Harness checkout')
+  process.exit(0)
+}
+
 const dir = mkdtempSync(join(tmpdir(), 'restart-test-'))
 const dbPath = join(dir, 'r.sqlite')
 const meta = { version: 0, id: crypto.randomUUID(), createdAt: Date.now(), cwd: '/w' }
