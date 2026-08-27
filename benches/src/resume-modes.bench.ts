@@ -214,20 +214,42 @@ export async function resumeModesBench(): Promise<void> {
       const page = await src.readSuffix(meta.id, 4000)
       // Keep original canonical seqs; baseSeq anchors the boundary.
       const baseSeq = Number((page.events[0] as { seq: number }).seq)
-      const sess = Session.fromRestoreWindow(
-        meta.id,
-        { events: page.events.map((e) => ({ ...e })), baseSeq, totalLength: info?.length },
-        meta,
-      ) as any
-      void sess.deriveMessages()
-      report(
-        'lazy-window',
-        t0,
-        c0,
-        r0,
-        page.events.length,
-        `canonicalSeqStart=${baseSeq} endOfLog=${page.endOfLogAt !== undefined}`,
-      )
+      let sess: any | undefined
+      try {
+        sess = Session.fromRestoreWindow(
+          meta.id,
+          { events: page.events.map((e) => ({ ...e })), baseSeq, totalLength: info?.length },
+          meta,
+        ) as any
+        // Agent-ready requires derivation; when surface nodes precede the
+        // hydrated window this MUST refuse loudly (LazyWindowDeriveError)
+        // instead of silently serving partial history. That is the recorded
+        // outcome until fold-state checkpoint injection lands upstream.
+        void sess.deriveMessages()
+        report(
+          'lazy-window',
+          t0,
+          c0,
+          r0,
+          page.events.length,
+          `canonicalSeqStart=${baseSeq} endOfLog=${page.endOfLogAt !== undefined}`,
+        )
+      } catch (err) {
+        const name = (err as Error)?.name ?? 'Error'
+        const snapErr = snapshotResources(t0, c0)
+        console.log(
+          [
+            `resume-lazy-window`,
+            `agent_ready=REFUSED`,
+            `error=${name}`,
+            `reason=${String((err as Error).message).slice(0, 80)}`,
+            `construction_wall=${fmt(snapErr.wallMs)}ms`,
+            `objects_materialized=${fmt(page.events.length, 0)}`,
+            `(fold-state checkpoint injection pending upstream)`,
+          ].join(' | '),
+        )
+        void sess
+      }
     }
 
     // ---- Mode 3: hot cache (pre-deserialized prefix + suffix held in memory) ----

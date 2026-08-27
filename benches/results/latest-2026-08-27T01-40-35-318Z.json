@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "machine": "cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness",
+    "trials": 3
+  },
+  "records": [
+    {
+      "benchmark": "resume-modes",
+      "timestamp": "2026-08-27T01:40:35.242Z",
+      "raw": "resume-legacy-full-restore | events_materialized=1,000,001 | wall_to_agent_ready=718.31ms | cpu_main=691.65ms | rssDelta=+-248MiB | ",
+      "message": "",
+      "events_materialized": "1,000,001",
+      "wall_to_agent_ready": "718.31ms",
+      "cpu_main": "691.65ms",
+      "rssDelta": "+-248MiB"
+    },
+    {
+      "benchmark": "resume-modes",
+      "timestamp": "2026-08-27T01:40:35.285Z",
+      "raw": "resume-checkpoint-suffix | events_materialized=4,117 | wall_to_agent_ready=39.78ms | cpu_main=60.1ms | rssDelta=+-18.3MiB | logical_events_in_log=1,000,000 payloadKB=299.2 physicalRowsTouched=117",
+      "message": "resume-checkpoint-suffix",
+      "events_materialized": "4,117",
+      "wall_to_agent_ready": "39.78ms",
+      "cpu_main": "60.1ms",
+      "rssDelta": "+-18.3MiB",
+      "logical_events_in_log": "1,000,000 payloadKB=299.2 physicalRowsTouched=117"
+    },
+    {
+      "benchmark": "resume-modes",
+      "timestamp": "2026-08-27T01:40:35.289Z",
+      "raw": "resume-lazy-window | events_materialized=4,000 | wall_to_agent_ready=3.44ms | cpu_main=3.95ms | rssDelta=+0.9MiB | canonicalSeqStart=996000 endOfLog=true",
+      "message": "resume-lazy-window",
+      "events_materialized": "4,000",
+      "wall_to_agent_ready": "3.44ms",
+      "cpu_main": "3.95ms",
+      "rssDelta": "+0.9MiB",
+      "canonicalSeqStart": "996000 endOfLog=true"
+    },
+    {
+      "benchmark": "resume-modes",
+      "timestamp": "2026-08-27T01:40:35.309Z",
+      "raw": "resume-hot-cache | events_materialized=4,117 | wall_to_agent_ready=17.84ms | cpu_main=29.4ms | rssDelta=+-0.2MiB | ",
+      "message": "",
+      "events_materialized": "4,117",
+      "wall_to_agent_ready": "17.84ms",
+      "cpu_main": "29.4ms",
+      "rssDelta": "+-0.2MiB"
+    }
+  ]
+}

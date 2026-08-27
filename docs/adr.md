@@ -62,3 +62,11 @@ Format: problem → evidence → alternatives → decision → consequences → 
 * **Problem**: full-log revision changes every append ⇒ naive revision keys invalidate constantly.
 * **Decision**: generate at turn/end with invalidation-on-any-mutation policy initially; stronger prefix tokens (hashes/commit markers) deferred to upstream semantic review (docs/checkpoints.md).
 * **Revisit if**: measured wake costs at realistic cadences make stricter tokens necessary.
+
+## ADR-009: Windowed restore seam shipped upstream-side FIRST, minimal width
+
+* **Problem**: prepareCore→ctx.sessions.prepare demands contiguous seed[] from 0.
+* **Evidence**: all four resume-mode measurements; 881-test green regression sweep on patched core.
+* **Decision**: land the NARROWEST seam on branch dsh-next/lazy-session-seam — RestoredHistoryWindow/fromRestoreWindow preserving canonical seqs — WITHOUT yet inventing checkpoint-injection plumbing inside core.
+* **Consequences**: lazy-window gives canonical-id Sessions cheaply but partial derived state; complete agent-ready semantics continue via the validated dense-rebase checkpoint until fold-state injection tranche lands.
+* **Revisit trigger**: upstream PR review outcomes + telemetry/token-meter E-class migration patches.

@@ -4,11 +4,9 @@
 
 ## resume-modes
 # building fixture (~1,000,000 logical events, sparse messages)…
-resume-legacy-full-restore | events_materialized=1,000,001 | wall_to_agent_ready=522.57ms | cpu_main=1,130.87ms | rssDelta=+205.1MiB | 
-resume-checkpoint-suffix | events_materialized=4,117 | wall_to_agent_ready=24.67ms | cpu_main=41.48ms | rssDelta=+2.4MiB | logical_events_in_log=1,000,000 payloadKB=299.2 physicalRowsTouched=117
-TypeError: Cannot read properties of undefined (reading 'type')
-    at deriveEventMessage (/private/tmp/dsh-lazy-seam/packages/core/session/src/surface.ts:87:17)
-    at Session.deriveEventMessage (/private/tmp/dsh-lazy-seam/packages/core/session/src/index.ts:845:12)
-    at Session.deriveMessages (/private/tmp/dsh-lazy-seam/packages/core/session/src/index.ts:828:24)
-    at Module.resumeModesBench (/Users/ducnguyen/Documents/dsh-next/benches/src/resume-modes.bench.ts:222:17)
-    at async main (/Users/ducnguyen/Documents/dsh-next/benches/src/main.ts:63:5)
+resume-legacy-full-restore | events_materialized=1,000,001 | wall_to_agent_ready=718.31ms | cpu_main=691.65ms | rssDelta=+-248MiB | 
+resume-checkpoint-suffix | events_materialized=4,117 | wall_to_agent_ready=39.78ms | cpu_main=60.1ms | rssDelta=+-18.3MiB | logical_events_in_log=1,000,000 payloadKB=299.2 physicalRowsTouched=117
+resume-lazy-window | events_materialized=4,000 | wall_to_agent_ready=3.44ms | cpu_main=3.95ms | rssDelta=+0.9MiB | canonicalSeqStart=996000 endOfLog=true
+resume-hot-cache | events_materialized=4,117 | wall_to_agent_ready=17.84ms | cpu_main=29.4ms | rssDelta=+-0.2MiB | 
+
+# json results written to benches/results/latest-2026-08-27T01-40-35-318Z.json

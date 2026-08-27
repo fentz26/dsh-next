@@ -128,3 +128,41 @@ trips `validateSchemaForMutation`); storage must be a provider-owned sidecar.
 
 Stage-4/5 remain blocked by the public bridge contract exactly as documented in
 resume-acceleration.md; acceptance numbers above quantify what the seam unlocks.
+
+
+## Milestone update — core seam implemented on DSH branch
+
+DSH branch `dsh-next/lazy-session-seam` (worktree `/tmp/dsh-lazy-seam`,
+commits `8071fc9cf2` + `66a7599f49`, based on release `b150a551b8`):
+
+* `RestoredHistoryWindow { events, baseSeq, totalLength? }`
+* `Session.fromRestoreWindow(id, window, header)`
+* Canonical seq identities PRESERVED (appends continue `baseSeq + length`);
+  SurfaceManager binds the window baseSeq; `firstLiveSeq` offset-aware;
+  `restoredBaseSeq/restoredHistoryLength` accessors
+* Legacy `fromRestore` byte-for-byte unchanged — worktree suites green:
+  core/session 286 · persistence 504 · projection+agent-loop 377
+
+### Full five-mode table (~1M-event fixture)
+
+| mode | objects | wall→agent-ready | notes |
+|---|---:|---:|---|
+| legacy full restore | 1,000,001 | 718 ms (stall) | eager graph |
+| **checkpoint + suffix** | **4,117** | **39.8 ms** | complete model state; seqs internally dense-rebased (mapping retained) |
+| **lazy-window (seam)** | **4,000** | **3.4 ms** | CANONICAL seqs; derivation covers hydrated window |
+| hot cache | 4,117 | 17.8 ms | warm artifact |
+| raw paged suffix read | 5,002 | 1.9 ms | view layer |
+
+`LazyWindowDeriveError`: derivation refuses LOUDLY when surface nodes precede
+the hydrated window — the remaining gap is FOLD-STATE CHECKPOINT INJECTION
+(persisted derived-messages/fold cursors attached to windowed restores),
+specified as the next tranche before coordinator adoption.
+
+### Updated tranche status
+
+1. ✅ logical range-read source
+2. ✅ consumer migration proof (export streaming via export-consumer)
+3. ✅ model-facing checkpoint prototype (equivalence-tested)
+4. 🟡 lazy Session preparation: CORE SEAM LANDED on branch; coordinator
+   wiring + fold-state injection outstanding
+5. ⛔ stop eager materialization on cold resume — blocked by #4 completion
