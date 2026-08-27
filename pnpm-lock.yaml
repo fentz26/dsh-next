@@ -32,8 +32,6 @@ importers:
 
   packages/checkpoint-replay: {}
 
-  packages/checkpoints: {}
-
   packages/descriptor-store:
     dependencies:
       '@dsh-next/journal':

@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "machine": "cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness",
+    "trials": 3
+  },
+  "records": [
+    {
+      "benchmark": "resume-modes",
+      "timestamp": "2026-08-27T01:08:26.063Z",
+      "raw": "resume-legacy-full-restore | events_materialized=1,000,001 | wall_to_agent_ready=524.69ms | cpu_main=1,112.08ms | rssDelta=+199.7MiB | ",
+      "message": "",
+      "events_materialized": "1,000,001",
+      "wall_to_agent_ready": "524.69ms",
+      "cpu_main": "1,112.08ms",
+      "rssDelta": "+199.7MiB"
+    },
+    {
+      "benchmark": "resume-modes",
+      "timestamp": "2026-08-27T01:08:26.086Z",
+      "raw": "resume-checkpoint-suffix | events_materialized=4,117 | wall_to_agent_ready=22.92ms | cpu_main=38.47ms | rssDelta=+1.7MiB | logical_events_in_log=1,000,000 payloadKB=299.2 physicalRowsTouched=117",
+      "message": "resume-checkpoint-suffix",
+      "events_materialized": "4,117",
+      "wall_to_agent_ready": "22.92ms",
+      "cpu_main": "38.47ms",
+      "rssDelta": "+1.7MiB",
+      "logical_events_in_log": "1,000,000 payloadKB=299.2 physicalRowsTouched=117"
+    },
+    {
+      "benchmark": "resume-modes",
+      "timestamp": "2026-08-27T01:08:26.103Z",
+      "raw": "resume-hot-cache | events_materialized=4,117 | wall_to_agent_ready=14.18ms | cpu_main=19.04ms | rssDelta=+1.5MiB | ",
+      "message": "",
+      "events_materialized": "4,117",
+      "wall_to_agent_ready": "14.18ms",
+      "cpu_main": "19.04ms",
+      "rssDelta": "+1.5MiB"
+    }
+  ]
+}

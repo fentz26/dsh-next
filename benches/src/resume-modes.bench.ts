@@ -31,10 +31,16 @@ const { SqliteStore } = require_(pathToFileURL(`${dshRoot}/packages/session/sess
     close(): Promise<void>
   }
 }
-const coreSession = await import(pathToFileURL(`${dshRoot}/packages/core/session/src/index.ts`).href) as never as {
+// Uses the focused DSH branch (/tmp/dsh-lazy-seam, dsh-next/lazy-session-seam)
+// when available via DSH_LAZY_CORE; falls back to DSH checkout otherwise.
+const corePath =
+  process.env.DSH_LAZY_CORE ??
+  `${dshRoot}/packages/core/session/src/index.ts`
+const coreSession = await import(pathToFileURL(corePath).href) as never as {
   Session: any
   SESSION_FORMAT_VERSION: number
 }
+const hasWindow = typeof coreSession.Session.fromRestoreWindow === 'function'
 const { Session } = coreSession
 
 // Fixture: mixed-with-sparse-messages — most volume is packed chunk runs,
@@ -194,6 +200,33 @@ export async function resumeModesBench(): Promise<void> {
           (prefixPage.approxPayloadBytes + suffixPage.approxPayloadBytes) / 1024,
           1,
         )} physicalRowsTouched=${prefixPage.inspectedCount > 0 ? prefixPage.events.length : 0}`,
+      )
+    }
+
+    // ---- Mode 2b: LAZY WINDOW (canonical seqs; recent window only) ----
+    if (hasWindow && process.env.DSH_LAZY_CORE !== undefined) {
+      global.gc?.()
+      const t0 = process.hrtime.bigint()
+      const c0 = cpuBaseline()
+      const r0 = rssMiB()
+
+      const info = await src.meta(meta.id)
+      const page = await src.readSuffix(meta.id, 4000)
+      // Keep original canonical seqs; baseSeq anchors the boundary.
+      const baseSeq = Number((page.events[0] as { seq: number }).seq)
+      const sess = Session.fromRestoreWindow(
+        meta.id,
+        { events: page.events.map((e) => ({ ...e })), baseSeq, totalLength: info?.length },
+        meta,
+      ) as any
+      void sess.deriveMessages()
+      report(
+        'lazy-window',
+        t0,
+        c0,
+        r0,
+        page.events.length,
+        `canonicalSeqStart=${baseSeq} endOfLog=${page.endOfLogAt !== undefined}`,
       )
     }
 

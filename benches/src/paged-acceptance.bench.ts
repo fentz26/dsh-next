@@ -59,7 +59,10 @@ export async function pagedAcceptanceBench(): Promise<void> {
     const events = generateChunkStream(streamBytes).map((e, i) => ({ ...e, seq: i }))
     for (let i = 0; i < events.length; i += 500) await builder.appendBatch(meta, events.slice(i, i + 500), false)
 
-    // Baseline: full canonical load.
+    // Baseline: full canonical load. NOTE: load is SYNCHRONOUS — the event
+    // loop cannot run during it, so "lag" ≈ wall time by construction and an
+    // in-flight RSS sampler cannot fire; the honest comparator is end-of-op
+    // RSS delta (retained allocations) on identical axes for both paths.
     const t0 = process.hrtime.bigint()
     const c0 = cpuBaseline()
     const r0 = rssMiB()
@@ -84,16 +87,24 @@ export async function pagedAcceptanceBench(): Promise<void> {
         `wall=${fmt(snapFull.wallMs)}ms`,
         `cpu=${fmt(snapFull.cpuUserMs + snapFull.cpuSystemMs)}ms`,
         `rssDelta=+${fmt(fullRssPeak, 1)}MiB`,
+        `loop_block≈${fmt(snapFull.wallMs)}ms(sync)`,
       ].join(' | '),
     )
     console.log(
       [
         `acceptance-paged(suffix-4000)`,
         `logical_events_in_log=${info ? fmt(info.length, 0) : '?'}`,
-        `objects_allocated=${fmt(page.inspectedCount, 0)}`,
+        `materialized_count=${fmt(page.events.length, 0)}`,
+        `inspected_count=${fmt(page.inspectedCount, 0)}`,
+        `decoded_logical_incl_skip=${fmt(page.decodedLogicalCount, 0)}`,
+        `physical_rows_touched=${fmt(page.physicalRowsTouched, 0)}`,
+        `compressed_bytes_read=${fmt(page.compressedBytesRead, 0)}`,
+        `decoded_payload_bytes=${fmt(page.decodedPayloadBytes, 0)}`,
+        `objects_allocated≈inspected(${fmt(page.inspectedCount, 0)})+overhead`,
         `wall=${fmt(snapPaged.wallMs)}ms`,
         `cpu=${fmt(snapPaged.cpuUserMs + snapPaged.cpuSystemMs)}ms`,
         `rssDelta=+${fmt(rssMiB() - mr0, 1)}MiB`,
+        `loop_block=${fmt(snapPaged.wallMs)}ms`,
         `payloadKB=${fmt(page.approxPayloadBytes / 1024, 1)}`,
       ].join(' | '),
     )
