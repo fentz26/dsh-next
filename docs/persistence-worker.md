@@ -40,10 +40,25 @@ exit await → terminate fallback).
 
 ## Failure semantics
 
-* Worker `error`/premature exit ⇒ every pending request rejects with typed
+* Worker `error`/premature exit ⇒ every in-flight request rejects with a typed
   `WorkerPersistenceError`; backend enters failed state; further calls fail
-  fast. **No automatic restart** (deterministic failure first; restart is a
-  later, separately-gated feature).
+  fast. Default remains **fail-fast** — an interrupted request's commit status
+  is never guessed.
+* Opt-in recovery (`restartOnCrash: true`, measured via fault injection):
+  pendings still reject deterministically, then the worker reopens (3 attempts,
+  SQLite locking arbitrates against any stale writer), pre-crash durable data
+  is visible immediately after recovery, and new appends continue under normal
+  contiguity guards. Tested: restart.test.ts (2/2).
+
+## Wire transport placement (#15/#16 evidence)
+
+`benches/results/ipc-transport.txt`: crossing 200-event write-behind batches
+as ONE JSON string beats structured-cloning the object graph ~2x
+(31 ms vs 67 ms per 300 iterations); stringify cost on the main thread measured
+within noise. The backend therefore ships `appendTransport='stringified'` as
+the measured default (escape hatch available). Return-direction cloning of full
+reconstructed graphs was the confirmed slow path at million-event scale —
+hence loadStoredPaged for giant logs.
 * Backpressure: bounded in-flight requests (default 64); overflow waits FIFO.
   No unbounded main-thread queuing if the worker falls behind.
 * Cancellation: abort rejects only ops not yet dispatched. Dispatched writes

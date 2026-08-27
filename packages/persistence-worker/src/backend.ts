@@ -19,6 +19,7 @@
  */
 import pathToFileURL_ from 'node:url'
 import { Worker } from 'node:worker_threads'
+import { EventEmitter } from 'node:events'
 import {
   PROTOCOL_VERSION,
   WorkerPersistenceError,
@@ -36,6 +37,13 @@ export interface WorkerBackendOptions {
   /** Module exporting DSH's SqliteStore (.ts under tsx; compiled .js when packaged). */
   readonly storeModulePath?: string
   readonly maxInFlight?: number
+  /**
+   * Opt-in automatic reopen after an unexpected worker death. Default false
+   * (deterministic fail-fast). Reopen is safe against double-writers because
+   * SQLite locking + busy_timeout arbitrate at the storage layer; coordinator
+   * cursor/contiguity guards remain authoritative regardless of thread count.
+   */
+  readonly restartOnCrash?: boolean
   /**
    * Append-path wire encoding. Measured (benches/results/ipc-transport.txt):
    * a single JSON string crosses ~2x faster than structured-cloning nested
@@ -64,7 +72,7 @@ const ENCODED_EVENTS = 1
 /** Safety valve so a malformed/unflagged stream can never hang the caller. */
 const MAX_PAGES_SAFETY = 1_000_000
 
-export class WorkerSqliteBackend {
+export class WorkerSqliteBackend extends EventEmitter {
   private worker!: Worker
   private seq = 0
   private pending = new Map<number, { reject: (e: Error) => void }>()
@@ -74,18 +82,50 @@ export class WorkerSqliteBackend {
   private readonly maxInFlight: number
   private waitQueue: Array<() => void> = []
   private stats_: BackendStats = { workerCpuUserMs: 0, workerCpuSystemMs: 0, requestsDispatched: 0, failed: false }
+  private readonly restartOnCrash: boolean
   private readonly appendTransport: NonNullable<WorkerBackendOptions['appendTransport']>
   readonly name = 'session-persistence-sqlite-worker'
 
   constructor(private readonly options: WorkerBackendOptions) {
+    super()
     this.maxInFlight = options.maxInFlight ?? 64
+    this.restartOnCrash = options.restartOnCrash ?? false
     this.appendTransport = options.appendTransport ?? 'stringified'
   }
 
   async init(): Promise<void> {
+    await this.initInternal()
+    if (this.disposed) return
+    // Lifecycle failure wiring is attached once per worker instance; reopen
+    // re-attaches through this same path.
+    {
+      const w = this.worker
+      w.on('error', (err: Error) => {
+        if (!this.disposed) this.markFailed(err)
+      })
+      w.on('exit', () => {
+        if (!this.disposed) this.markFailed(new Error('worker exited unexpectedly'))
+      })
+    }
+    try {
+      await this.waitFor('open', {
+        path: this.options.path,
+        journalMode: this.options.journalMode,
+        busyTimeoutMs: this.options.busyTimeoutMs,
+      })
+      this.failed = false
+    } catch (err) {
+      await this.terminateNow(500)
+      this.worker = undefined as unknown as Worker
+      throw err
+    }
+  }
+
+  /** Shared construction used by both initial open and crash reopen. */
+  private async initInternal(): Promise<void> {
     const storeModulePath =
       this.options.storeModulePath ?? resolveDefaultStoreModulePath()
-    this.worker = new Worker(new URL('./worker.ts', import.meta.url), {
+    const worker = new Worker(new URL('./worker.ts', import.meta.url), {
       workerData: { protocolVersion: PROTOCOL_VERSION },
       execArgv: ['--import', 'tsx'],
       env: {
@@ -93,42 +133,13 @@ export class WorkerSqliteBackend {
         DSH_NEXT_STORE_MODULE: pathToFileURL(storeModulePath).href,
       },
     })
+    this.worker = worker
     // Route framed responses to their per-request listeners. Bound to the
     // local instance so late frames during/after termination can never
     // dereference a cleared handle.
-    {
-      const w = this.worker
-      w.on('message', ({ res }: { res: WorkerResponse }) => {
-        w.emit(`res:${res.seq}`, res)
-      })
-    }
-    const ready = new Promise<void>((resolve) => {
-      // Failures during init propagate through the pending slot below.
-      resolve(undefined)
+    worker.on('message', ({ res }: { res: WorkerResponse }) => {
+      worker.emit(`res:${res.seq}`, res)
     })
-    await ready
-    try {
-      await this.waitFor(
-        'open',
-        {
-          path: this.options.path,
-          journalMode: this.options.journalMode,
-          busyTimeoutMs: this.options.busyTimeoutMs,
-        },
-      )
-    } catch (err) {
-      await this.terminateNow(500)
-      throw err
-    }
-    {
-      const w = this.worker
-      w.on('error', (err) => {
-        if (!this.disposed) this.markFailed(err)
-      })
-      w.on('exit', () => {
-        if (!this.disposed) this.markFailed(new Error('worker exited unexpectedly'))
-      })
-    }
   }
 
   // ---- PersistenceBackend hook surface ----
@@ -344,18 +355,76 @@ export class WorkerSqliteBackend {
   }
 
   private markFailed(err: Error): void {
-    if (this.failed) return
+    // Ignore lifecycle events from a worker already superseded mid-reopen.
+    if (this.disposed || this.reopening) return
     this.failed = true
     this.stats_.failed = true
-    const failure = err instanceof WorkerPersistenceError
-      ? err
-      : new WorkerPersistenceError('persistence worker died', {
-          phase: 'lifecycle',
-          cause: err.message,
-        })
+    const failure =
+      err instanceof WorkerPersistenceError
+        ? err
+        : new WorkerPersistenceError('persistence worker died', { phase: 'lifecycle', cause: err.message })
+    // In-flight callers ALWAYS receive deterministic rejections — even when
+    // automatic reopen succeeds. Restart restores capability for FUTURE ops;
+    // an interrupted request's commit status must never be guessed.
     for (const [, p] of this.pending) p.reject(failure)
     this.pending.clear()
     for (const wake of this.waitQueue.splice(0)) wake()
+    this.emit('failed', failure)
+
+    if (this.restartOnCrash && !this.currentlyOpening) {
+      void this.reopenAfterCrash()
+      return
+    }
+  }
+
+  private reopening = false
+  private currentlyOpening = false
+
+  private async reopenAfterCrash(): Promise<void> {
+    if (this.reopening || this.disposed) return
+    this.reopening = true
+    try {
+      await this.terminateNow(250)
+    } catch {
+      void undefined
+    }
+    let lastErr: Error | undefined
+    this.failed = false
+    this.stats_.failed = false
+    for (let attempt = 0; attempt < 3 && lastErr === undefined; attempt++) {
+      this.currentlyOpening = true
+      try {
+        await new Promise<void>((resolve, reject) => {
+          void (async () => {
+            try {
+              await this.init()
+              resolve()
+            } catch (e) {
+              reject(e instanceof Error ? e : new Error(String(e)))
+            }
+          })()
+        })
+      } catch (err) {
+        lastErr = err as Error
+        await new Promise((r) => setTimeout(r, 50 * (attempt + 1)))
+      } finally {
+        this.currentlyOpening = false
+      }
+    }
+    this.reopening = false
+    if (lastErr !== undefined) {
+      this.failed = true
+      this.stats_.failed = true
+      this.emit(
+        'failed',
+        lastErr instanceof WorkerPersistenceError
+          ? lastErr
+          : new WorkerPersistenceError('persistence worker failed to reopen', { phase: 'restart', cause: lastErr.message }),
+      )
+    } else {
+      for (const wake of this.waitQueue.splice(0)) wake()
+      this.emit('restarted')
+    }
   }
 
   private workerAlive(): boolean {
