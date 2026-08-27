@@ -37,6 +37,39 @@ cache can only shave the minority slice (zstd decompress + varint + JSON
 parse ≈ small fraction vs allocation/graph construction) unless consumers can
 defer hydration.
 
+## Precise cost attribution (`expansion-attribution.bench`, 50 MB / 1.09 M logical)
+
+Phase-splitting `decodeRow`'s packed-row pipeline across 8 passes:
+
+| phase | ms/pass | share |
+|---|---|---|
+| zstd decompress (~30 MB text) | 48 | 41% |
+| JSON.parse | 28 | 23% |
+| envelope construction (real decode path) | 43 | 36% |
+
+Plus SQL fetch / EventRow decode / committed-prefix validation / GC completes
+the remaining gap to measured whole-op times. Conclusion for the seam
+conversation: ANY of these phases can be pipelined/paged by a backend once
+consumers permit deferred delivery — today they are forced into ONE eager
+allocation burst of >1 M envelopes.
+
+## Evaluated and rejected: worker-side revision-keyed reconstruction cache
+
+Design considered for durable-agent wake loops (same session resumed N times):
+cache decoded graphs keyed by `{sessionId, sourceRevision}`, invalidating on
+appendBatch/commitRepair or revision mismatch (never timestamps — rule #45),
+size-bounded LRU so nothing becomes second authority.
+
+Rejected on CONTRACT grounds, not performance grounds: the coordinator requires
+backend loads to return graphs that are "fresh, mutually unaliased, and
+unretained" because preparation freezes/mutates and publishes them in place.
+Serving cached instances would alias mutable state across resumes; serving
+defensive copies costs a structured clone comparable to re-decoding. Therefore,
+under current public contracts, EVERY resume pays full reconstruction — which
+is precisely why repeated-wake economics depend on the paged-hydration seam
+(upstream-seam-proposal.md), not on any local cache. This closes the last
+plausible in-tree shortcut honestly.
+
 ## Acceleration designs (ranked, evidence-driven)
 
 ### 1. Worker-owned reconstruction (measured: stall gone, wall regresses)

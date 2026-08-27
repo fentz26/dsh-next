@@ -1,0 +1,7 @@
+# dsh-next benchmarks
+# cpu=Apple M3 x8, node=v22.23.1, platform=darwinarm64, dsh_root=/Users/ducnguyen/deepseek-harness
+# trials=3 (env: BENCH_TRIALS, BENCH_STREAM_BYTES, BENCH_JOURNAL_APPENDS, BENCH_COMPRESS_OPS)
+
+## expansion-attribution
+expansion-attribution rows=2186 logicalEvents≈1092266 | iters=8 | zstd=48ms (41%) | jsonParse=28ms (23%) | envelopes(incl.2nd stub parse)=43ms (36%) | decompressedMBperPass=30.0 | rssNow=206MiB
+

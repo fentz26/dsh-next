@@ -51,9 +51,18 @@ Invariants preserved:
 * Replay/UI consumers simply iterate pages; time-to-agent-ready becomes bounded
   by eager-suffix size instead of total history length.
 
-Estimated effect (from measured stage breakdown): agent-ready resume bounded by
-~tens-of-ms decode + page fetch instead of hundreds of ms; RSS delta drops from
-sub-GB to active-tail-sized.
+Measured phase attribution for the eager burst (8-pass average): zstd
+decompress 41%, JSON.parse 23%, envelope construction 36% — three
+independently streamable stages, currently coalesced into one >1 M-object
+allocation event. Estimated effect: agent-ready resume bounded by
+active-tail decode + first-page fetch; peak RSS tracks the active tail
+instead of total history.
+
+Additionally explored-and-rejected locally: revision-keyed caches of decoded
+graphs cannot help under existing contracts because prepare() demands fresh,
+unaliased, retained-by-nothing graphs (preparation freezes and publishes them);
+copying a cache for safety costs what decoding costs. Repeated durable-agent
+wakes therefore pay full reconstruction indefinitely without this seam.
 
 ## Why upstream, why minimal
 
