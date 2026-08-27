@@ -1,0 +1,81 @@
+name: Rust Cold Compile Canary
+
+on:
+  schedule:
+    - cron: "23 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_MANIFEST: Cargo.toml
+  RUST_TARGET: x86_64-unknown-linux-gnu
+
+jobs:
+  cold-check:
+    name: Cold check (${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: ${{ matrix.advisory }}
+    defaults:
+      run:
+        working-directory: crates/native-journal
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: stable-1.97.1
+            advisory: false
+          - toolchain: nightly-next-solver
+            advisory: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned stable Rust
+        if: matrix.toolchain == 'stable-1.97.1'
+        uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install current nightly Rust
+        if: matrix.toolchain == 'nightly-next-solver'
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      # registry-only deliberately disables compiler-object reuse. Each matrix
+      # entry also gets an empty target directory, so both measurements are cold.
+      - name: Configure Cargo download cache
+        uses: fentz26/cargo-tog/action@8cc38809cf6458d369c7ade924fc7dba3878d9a8
+        with:
+          mode: registry-only
+          install-wrapper: "false"
+          workspaces: "crates/native-journal -> target"
+          cache-targets: "false"
+          key: rust-cold-${{ matrix.toolchain }}-${{ runner.os }}-${{ runner.arch }}-x86_64-unknown-linux-gnu-${{ hashFiles('crates/native-journal/Cargo.lock') }}
+
+      - name: Measure cold cargo check
+        shell: bash
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/cold-target/${{ matrix.toolchain }}
+          RUSTFLAGS: ${{ matrix.toolchain == 'nightly-next-solver' && '-Znext-solver=globally' || '' }}
+        run: |
+          set -euo pipefail
+          test ! -e "$CARGO_TARGET_DIR" || test -z "$(find "$CARGO_TARGET_DIR" -mindepth 1 -print -quit)"
+          rustc --version --verbose
+          started=$(date +%s%N)
+          cargo check --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --all-targets --all-features --locked
+          ended=$(date +%s%N)
+          elapsed_ms=$(( (ended - started) / 1000000 ))
+          {
+            echo "### Cold compiler measurement: ${{ matrix.toolchain }}"
+            echo
+            echo "- rustc: \`$(rustc --version)\`"
+            echo "- target: \`$RUST_TARGET\`"
+            echo "- profile: dev/check, all targets and features"
+            echo "- compiler objects: disabled (cargo-tog registry-only)"
+            echo "- target directory: initially empty and lane-specific"
+            echo "- elapsed: ${elapsed_ms} ms"
+          } >> "$GITHUB_STEP_SUMMARY"

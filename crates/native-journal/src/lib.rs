@@ -111,7 +111,11 @@ impl NativeByteJournal {
             ));
         }
         let lossy = offset < self.window_start as f64;
-        let from = if lossy { self.window_start } else { offset as u64 };
+        let from = if lossy {
+            self.window_start
+        } else {
+            offset as u64
+        };
 
         let mut out = Vec::new();
         for seg in &self.segments {
@@ -162,4 +166,54 @@ impl NativeByteJournal {
 #[napi]
 pub fn probe() -> String {
     "dsh-next-native-journal ok".to_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{NativeByteJournal, Segment};
+
+    fn journal(max_bytes: u64) -> NativeByteJournal {
+        NativeByteJournal {
+            max_bytes,
+            window_start: 0,
+            total: 0,
+            segments: Default::default(),
+        }
+    }
+
+    fn append(journal: &mut NativeByteJournal, data: &[u8]) {
+        let start = journal.total;
+        journal.total += data.len() as u64;
+        journal.segments.push_back(Segment {
+            start,
+            data: data.to_vec(),
+        });
+        journal.evict();
+    }
+
+    #[test]
+    fn eviction_trims_across_segment_boundaries() {
+        let mut journal = journal(4);
+        append(&mut journal, b"abc");
+        append(&mut journal, b"def");
+
+        assert_eq!(journal.window_start, 2);
+        assert_eq!(journal.total, 6);
+        assert_eq!(journal.segments.len(), 2);
+        assert_eq!(journal.segments[0].start, 2);
+        assert_eq!(journal.segments[0].data, b"c");
+        assert_eq!(journal.segments[1].data, b"def");
+    }
+
+    #[test]
+    fn oversized_segment_retains_exact_tail() {
+        let mut journal = journal(4);
+        append(&mut journal, b"0123456789");
+
+        assert_eq!(journal.window_start, 6);
+        assert_eq!(journal.total, 10);
+        assert_eq!(journal.segments.len(), 1);
+        assert_eq!(journal.segments[0].start, 6);
+        assert_eq!(journal.segments[0].data, b"6789");
+    }
 }

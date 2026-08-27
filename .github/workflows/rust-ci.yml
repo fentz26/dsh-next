@@ -1,0 +1,242 @@
+name: Rust CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rust-*.yml"
+      - "crates/native-journal/**"
+      - "rust-toolchain.toml"
+      - "pnpm-lock.yaml"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/rust-*.yml"
+      - "crates/native-journal/**"
+      - "rust-toolchain.toml"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+  RUST_MANIFEST: Cargo.toml
+  RUST_TARGET: x86_64-unknown-linux-gnu
+
+jobs:
+  stable:
+    name: Stable Rust (authoritative)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/ci-stable
+      CARGO_TOG_CACHE_DIR: ${{ github.workspace }}/.cargo-tog-cache/stable-linux-x64-x86_64-unknown-linux-gnu
+    defaults:
+      run:
+        working-directory: crates/native-journal
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned stable Rust
+        uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: clippy,rustfmt
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Resolve compiler identity
+        id: compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc --version --verbose
+          cargo --version
+          echo "commit=$(rustc --version --verbose | sed -n 's/^commit-hash: //p')" >> "$GITHUB_OUTPUT"
+
+      # cargo-tog has no release tags yet. This is its reviewed public main
+      # commit (2026-08-26), pinned so CI cannot change underneath a PR.
+      - name: Configure cargo-tog and install nextest
+        uses: fentz26/cargo-tog/action@8cc38809cf6458d369c7ade924fc7dba3878d9a8
+        with:
+          mode: github
+          install-nextest: "true"
+          workspaces: "crates/native-journal -> target"
+          cache-targets: "false"
+          key: rust-stable-1.97.1-${{ runner.os }}-${{ runner.arch }}-x86_64-unknown-linux-gnu-dev-all-${{ hashFiles('crates/native-journal/Cargo.lock') }}
+
+      - name: Verify cache namespace inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ steps.compiler.outputs.commit }}"
+          test "$RUST_TARGET" = "x86_64-unknown-linux-gnu"
+          test "$CARGO_TOG_MODE" = "github"
+          test -z "${CARGO_TOG_BUCKET:-}"
+          printf 'lane=stable rustc=%s os=%s arch=%s target=%s mode=%s\n' \
+            "${{ steps.compiler.outputs.commit }}" "${{ runner.os }}" \
+            "${{ runner.arch }}" "$RUST_TARGET" "$CARGO_TOG_MODE"
+
+      - name: Formatting
+        run: cargo fmt --manifest-path "$RUST_MANIFEST" --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --all-targets --all-features --locked -- -D warnings
+
+      - name: Rust tests (nextest)
+        run: cargo nextest run --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --all-targets --all-features --locked
+
+      - name: Verify doctest applicability
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo metadata --manifest-path "$RUST_MANIFEST" --no-deps --format-version 1 \
+            | jq -e 'all(.packages[].targets[]; .crate_types == ["cdylib"])'
+          echo "cargo test --doc is not applicable: the N-API crate exposes only a cdylib target."
+
+      - name: Check native crate
+        run: cargo check --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --all-targets --all-features --locked
+
+      - name: Build native release artifact
+        run: cargo build --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --release --locked
+
+      - name: Validate Cargo package
+        run: cargo package --manifest-path "$RUST_MANIFEST" --locked
+
+      - name: Install JavaScript test dependencies
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: ${{ github.workspace }}
+
+      - name: Test native artifact against TypeScript reference
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          cp "$CARGO_TARGET_DIR/$RUST_TARGET/release/libdsh_next_native_journal.so" \
+            crates/native-journal/pilot.node
+          pnpm exec tsx crates/native-journal/__test__/differential.test.ts
+
+      - name: Warm compiler timing (informational)
+        shell: bash
+        run: |
+          set -euo pipefail
+          started=$(date +%s%N)
+          cargo check --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --all-targets --all-features --locked
+          ended=$(date +%s%N)
+          elapsed_ms=$(( (ended - started) / 1000000 ))
+          {
+            echo "### Stable compiler measurement"
+            echo
+            echo "- rustc: \`$(rustc --version)\`"
+            echo "- target: \`$RUST_TARGET\`"
+            echo "- profile: dev/check, all targets and features"
+            echo "- semantics: warm target + compiler-object cache"
+            echo "- elapsed: ${elapsed_ms} ms"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compiler-cache statistics
+        if: always()
+        run: sccache --show-stats || true
+
+  nightly-next-solver:
+    name: Nightly next-solver (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/ci-nightly-next-solver
+      CARGO_TOG_CACHE_DIR: ${{ github.workspace }}/.cargo-tog-cache/nightly-next-solver-linux-x64-x86_64-unknown-linux-gnu
+      RUSTFLAGS: -Znext-solver=globally
+    defaults:
+      run:
+        working-directory: crates/native-journal
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install current nightly Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Resolve nightly compiler identity
+        id: compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc --version --verbose
+          cargo --version
+          echo "commit=$(rustc --version --verbose | sed -n 's/^commit-hash: //p')" >> "$GITHUB_OUTPUT"
+
+      - name: Configure isolated cargo-tog and install nextest
+        uses: fentz26/cargo-tog/action@8cc38809cf6458d369c7ade924fc7dba3878d9a8
+        with:
+          mode: github
+          install-nextest: "true"
+          workspaces: "crates/native-journal -> target"
+          cache-targets: "false"
+          key: rust-nightly-next-solver-${{ runner.os }}-${{ runner.arch }}-x86_64-unknown-linux-gnu-dev-all-${{ hashFiles('crates/native-journal/Cargo.lock') }}
+
+      - name: Verify nightly isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ steps.compiler.outputs.commit }}"
+          test "$CARGO_TOG_MODE" = "github"
+          test "$CARGO_TARGET_DIR" != "${{ github.workspace }}/target/ci-stable"
+          test "$CARGO_TOG_CACHE_DIR" != "${{ github.workspace }}/.cargo-tog-cache/stable-linux-x64-x86_64-unknown-linux-gnu"
+          printf 'lane=nightly-next-solver rustc=%s os=%s arch=%s target=%s mode=%s\n' \
+            "${{ steps.compiler.outputs.commit }}" "${{ runner.os }}" \
+            "${{ runner.arch }}" "$RUST_TARGET" "$CARGO_TOG_MODE"
+
+      - name: Nightly next-solver tests
+        run: cargo nextest run --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --all-targets --all-features --locked
+
+      - name: Verify nightly doctest applicability
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo metadata --manifest-path "$RUST_MANIFEST" --no-deps --format-version 1 \
+            | jq -e 'all(.packages[].targets[]; .crate_types == ["cdylib"])'
+          echo "cargo test --doc is not applicable: the N-API crate exposes only a cdylib target."
+
+      - name: Nightly next-solver check
+        run: cargo check --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --all-targets --all-features --locked
+
+      - name: Nightly next-solver release build
+        run: cargo build --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --release --locked
+
+      - name: Warm compiler timing (informational)
+        shell: bash
+        run: |
+          set -euo pipefail
+          started=$(date +%s%N)
+          cargo check --manifest-path "$RUST_MANIFEST" --target "$RUST_TARGET" --all-targets --all-features --locked
+          ended=$(date +%s%N)
+          elapsed_ms=$(( (ended - started) / 1000000 ))
+          {
+            echo "### Nightly next-solver compiler measurement"
+            echo
+            echo "- rustc: \`$(rustc --version)\`"
+            echo "- target: \`$RUST_TARGET\`"
+            echo "- profile: dev/check, all targets and features"
+            echo "- solver: \`-Znext-solver=globally\`"
+            echo "- semantics: warm target + compiler-object cache"
+            echo "- elapsed: ${elapsed_ms} ms"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compiler-cache statistics
+        if: always()
+        run: sccache --show-stats || true
