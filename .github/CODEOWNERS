@@ -1,0 +1,31 @@
+# CODEOWNERS — dsh-next
+# Default owner for everything: required for PR review on all paths.
+*                                   @fentz26
+
+# Storage planes: worker persistence + paged logical source
+/packages/persistence-worker/       @fentz26
+/packages/paged-history/            @fentz26
+/packages/checkpoint-replay/        @fentz26
+/packages/checkpoints/              @fentz26
+
+# Journal primitives (TS + native)
+/packages/journal/                  @fentz26
+/packages/native/                   @fentz26
+/crates/native-journal/             @fentz26
+
+# Runtime descriptors / durable execution groundwork
+/packages/descriptor-store/         @fentz26
+
+# Benchmarks + diagnostics (numbers gate every architectural decision)
+/benches/                           @fentz26
+
+# Architecture authority: changes here govern tracks & acceptance gates
+/docs/architecture.md               @fentz26
+/docs/baseline-results.md           @fentz26
+/docs/adr.md                        @fentz26
+/docs/journal.md                    @fentz26
+/docs/persistence-worker.md         @fentz26
+/docs/resume-acceleration.md        @fentz26
+/docs/session-scale.md              @fentz26
+/docs/paged-hydration.md            @fentz26
+/docs/checkpoints.md                @fentz26
