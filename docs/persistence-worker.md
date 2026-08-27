@@ -38,17 +38,55 @@ tokens · inspect non-mutating closers · prepare/load torn-tail repair ·
 ignorable unknown events (coordinator-owned) · dispose draining (close op →
 exit await → terminate fallback).
 
-## Failure semantics
+## Failure semantics — generation-scoped state machine (P0 hardening)
 
-* Worker `error`/premature exit ⇒ every in-flight request rejects with a typed
-  `WorkerPersistenceError`; backend enters failed state; further calls fail
-  fast. Default remains **fail-fast** — an interrupted request's commit status
-  is never guessed.
-* Opt-in recovery (`restartOnCrash: true`, measured via fault injection):
-  pendings still reject deterministically, then the worker reopens (3 attempts,
-  SQLite locking arbitrates against any stale writer), pre-crash durable data
-  is visible immediately after recovery, and new appends continue under normal
-  contiguity guards. Tested: restart.test.ts (2/2).
+```text
+new → opening → ready ⇄ (restarting → ready | failed) → closing → closed
+```
+
+* Every Worker gets a monotonic **generation id**; its message/error/exit
+  handlers are closures over that generation. Events from stale generations
+  are ignored and can never fail the live one (recovery.test.ts G).
+* Exactly ONE published generation (`active`) exists at any time. A
+  replacement is opened only AFTER the old generation fully terminated
+  (exit awaited / terminate resolved). **Double-writer safety comes from
+  lifecycle ownership, not from SQLite locking** — overlaps are prevented,
+  not arbitrated.
+* Every dispatched request acquires exactly one capacity slot and releases it
+  exactly once on every terminal path (success, worker error frame, crash,
+  exit, shutdown, paged-stream failure, safety-limit failure) through one
+  centralized settlement (`PendingReq`). Backpressure waiters are explicit
+  objects, rejected deterministically on crash/dispose; queued aborted calls
+  are removed and never dispatched.
+* Worker death ⇒ its in-flight requests reject with typed
+  `WorkerPersistenceError` (commit status never guessed; writes are NEVER
+  auto-replayed), waiters reject, then EITHER:
+  - default: state `failed`, calls fail fast; or
+  - `restartOnCrash: true`: state `restarting` (stats.failed stays TRUE),
+    old generation terminated, then WORKER REOPEN retried up to
+    `restartAttempts` total attempts (default 3, deterministic 20ms·n
+    backoff, no jitter). Calls arriving before `restarted` fail fast with
+    the state name — no hidden queueing or replay. `failed` clears only
+    after a replacement actually opened.
+* Candidate crashes during open reject that attempt deterministically and
+  fully terminate the candidate (no orphan SQLite owners, no hangs).
+* `close()` always wins over recovery: no resurrection, no `restarted` after
+  dispose, all workers reaped.
+
+Reproduced-then-fixed defects (deterministic repro logs in
+`benches/results/repro-p0-*.txt`): inverted reopen retry condition (1 attempt
+on failure; extra workers spawned on success), inFlight capacity leak on
+crash and on paged error frames (post-restart deadlocks), recovery hang when
+a candidate died while opening, and the paged safety bound silently RESOLVING
+partial history. Previous tests missed these because the fault-injection hook
+bypassed capacity accounting, timing races substituted for deterministic
+lifecycle control, and no test counted spawned workers/attempts.
+
+Coverage: recovery.test.ts (12/12: retry counts, single-replacement,
+exhaustion, real-capacity crash, queued settlement, candidate death, stale
+generations, paged error release, safety-bound rejection, close-during-
+restart, repeated-cycle stability) + restart.test.ts (2/2) + differential
+suite (9/9) + coordinator integration (3/3).
 
 ## Wire transport placement (#15/#16 evidence)
 

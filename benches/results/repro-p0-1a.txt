@@ -1,0 +1,8 @@
+/Users/ducnguyen/Documents/dsh-next/packages/persistence-worker/src/backend.ts:103
+      w.on('error', (err: Error) => {
+        ^
+
+TypeError: Cannot read properties of undefined (reading 'on')
+    at WorkerSqliteBackend.init (/Users/ducnguyen/Documents/dsh-next/packages/persistence-worker/src/backend.ts:103:9)
+
+Node.js v22.23.1

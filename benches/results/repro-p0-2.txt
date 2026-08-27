@@ -1,0 +1,3 @@
+BUG-CONFIRMED - 2 real in-flight op crash → inFlight leaks → post-restart caller deadlocks
+
+bugs confirmed: 1, not reproduced: 0

@@ -1,0 +1,7 @@
+dbg[4] worker threadId= 1
+dbg[4] intercept FIRED seq= [ 'bbbc7b68-bf69-4c55-a8e4-9b8376ddf677', 1000 ]
+dbg[4] paged: REJECTED WorkerPersistenceError: Unknown named parameter 'unbindable'
+dbg[4] pagedRejected=true unblocked=false
+BUG-CONFIRMED - 4 paged error response → capacity leak → next caller deadlocks
+
+bugs confirmed: 1, not reproduced: 0

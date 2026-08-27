@@ -1,0 +1,4 @@
+dbg[1b] initCalls=1
+BUG-CONFIRMED - 1b failed reopen retries exactly ONCE (attempts=1, not 3)
+
+bugs confirmed: 1, not reproduced: 0

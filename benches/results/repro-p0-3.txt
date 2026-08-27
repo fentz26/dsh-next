@@ -1,0 +1,3 @@
+BUG-CONFIRMED - 3 worker dies while OPENING → markFailed ignored → hang (no failed/restarted)
+
+bugs confirmed: 1, not reproduced: 0
