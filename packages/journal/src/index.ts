@@ -35,6 +35,11 @@ export interface ByteJournal {
   readonly nextOffset: number
   readonly windowStart: number
   append(data: Uint8Array): number
+  /**
+   * Batched append for high-rate producers (mirrors native appendBatch):
+   * all-or-nothing ordering per call, single eviction pass afterwards.
+   */
+  appendBatch?(chunks: readonly Uint8Array[]): number
   readFrom(offset: number): JournalRead
 }
 
@@ -101,7 +106,7 @@ const SEGMENT_TARGET_BYTES = 64 * 1024
  * Exists as the differential-testing baseline and as the guaranteed-available
  * fallback when no native module is present.
  */
-export class ReferenceByteJournal {
+export class ReferenceByteJournal implements ByteJournal {
   private chunks: Buffer[] = []
   private windowBytes = 0
   private total = 0
@@ -155,7 +160,7 @@ export class ReferenceByteJournal {
  * intersecting the requested range, so N observers polling cost O(bytes-read),
  * not O(window) each time.
  */
-export class SegmentedByteJournal {
+export class SegmentedByteJournal implements ByteJournal {
   private segments: Segment[] = []
   /** Absolute stream offset of the first retained byte. */
   private winStart = 0
@@ -211,6 +216,11 @@ export class SegmentedByteJournal {
     this.segments.push({ start: this.total, buffer: src.subarray() })
     this.total += len
     this.evict()
+    return this.total
+  }
+
+  appendBatch(chunks: readonly Uint8Array[]): number {
+    for (const c of chunks) this.append(c)
     return this.total
   }
 
