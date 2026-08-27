@@ -60,6 +60,7 @@ jobs:
         shell: bash
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/cold-target/${{ matrix.toolchain }}
+          RUSTUP_TOOLCHAIN: ${{ matrix.toolchain == 'nightly-next-solver' && 'nightly' || '1.97.1' }}
           RUSTFLAGS: ${{ matrix.toolchain == 'nightly-next-solver' && '-Znext-solver=globally' || '' }}
         run: |
           set -euo pipefail

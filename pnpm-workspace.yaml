@@ -3,4 +3,4 @@ packages:
   - benches
   - crates/native-journal
 allowBuilds:
-  esbuild: set this to true or false
+  esbuild: true

@@ -7,6 +7,7 @@ on:
       - "crates/native-journal/**"
       - "rust-toolchain.toml"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   push:
     branches: [main]
     paths:
@@ -14,6 +15,7 @@ on:
       - "crates/native-journal/**"
       - "rust-toolchain.toml"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   workflow_dispatch:
 
 permissions:
@@ -159,6 +161,9 @@ jobs:
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target/ci-nightly-next-solver
       CARGO_TOG_CACHE_DIR: ${{ github.workspace }}/.cargo-tog-cache/nightly-next-solver-linux-x64-x86_64-unknown-linux-gnu
+      # Override the repository's authoritative stable rust-toolchain pin for
+      # this advisory job, including tools cargo-tog builds during setup.
+      RUSTUP_TOOLCHAIN: nightly
       RUSTFLAGS: -Znext-solver=globally
     defaults:
       run:
